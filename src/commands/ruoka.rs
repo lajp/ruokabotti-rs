@@ -28,7 +28,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
         Tue => "Tiistai",
         Wed => "Keskiviikko",
         Thu => "Torstai",
-        Fri => "Perjaintai",
+        Fri => "Perjantai",
         Sat => "Lauantai",
         Sun => "Sunnuntai"
     };
