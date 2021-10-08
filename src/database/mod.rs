@@ -3,6 +3,7 @@ use std::sync::Arc;
 use serenity::prelude::TypeMapKey;
 use sqlx::MySqlPool;
 pub mod nouda_ruoka;
+pub mod ruokakuva;
 
 pub struct Database {
     pool: MySqlPool,
