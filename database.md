@@ -13,6 +13,7 @@ USE RuokaDB;
 CREATE TABLE Ruoat (
 	RuokaID int NOT NULL AUTO_INCREMENT,
 	RuokaName TINYTEXT NOT NULL,
+	ImageName TINYTEXT,
 	PRIMARY KEY (RuokaID)
 );
 
@@ -25,6 +26,8 @@ CREATE TABLE Arvostelut (
 
 CREATE TABLE Ruokalista (
 	PVM DATE NOT NULL,
-	RuokaID int NOT NULL
+	RuokaID int NOT NULL,
+	KokoRuoka TINYTEXT NOT NULL,
+	FOREIGN KEY (RuokaID) REFERENCES Ruoat(RUOKAID)
 );
 ```
