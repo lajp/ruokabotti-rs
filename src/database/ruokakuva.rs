@@ -1,6 +1,10 @@
 use super::Database;
 use tracing::info;
 
+pub struct Ruoka {
+    ImageName: Option<String>
+}
+
 impl Database {
     pub async fn ruokakuva_by_name(&self, nimi:String) -> Option<String> {
         let mut conn = self.pool.acquire().await.unwrap();
@@ -8,7 +12,7 @@ impl Database {
             .fetch_one(&mut conn).await {
                 Ok(r) => r.ImageName,
                 Err(e) => {
-                    info!("Error while querying for food image {}: {}", nimi, e);
+                    info!("Error while querying for food image `{}`: {}", nimi, e);
                     None
                 },
             };
@@ -21,5 +25,17 @@ impl Database {
             }
         };
         ruokakuva
+    }
+    pub async fn ruokakuvat_by_query(&self, query:String) -> Option<Vec<String>> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let ruokakuvat = match sqlx::query!("SELECT ImageName FROM Ruoat WHERE LOWER(RuokaName) LIKE LOWER( ? )", format!("%{}%", query))
+            .fetch_all(&mut conn).await {
+                Ok(r) => r,
+                Err(e) => {
+                    info!("Error while querying for food image `{}`: {}", query, e);
+                    Vec::new()
+                },
+            };
+        Some(ruokakuvat.iter().map(|r| r.ImageName.as_ref().unwrap().clone()).collect())
     }
 }
