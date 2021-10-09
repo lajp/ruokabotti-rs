@@ -1,5 +1,6 @@
 mod commands;
 mod database;
+mod util;
 
 use std::{collections::HashSet, env, sync::Arc};
 

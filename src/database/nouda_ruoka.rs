@@ -1,9 +1,13 @@
 #![allow(dead_code)]
 use super::Database;
+use tracing::info;
 
 pub struct Ruoka {
     pub RuokaID: i32,
     pub RuokaName: String
+}
+pub struct RuokalistaEntry {
+    KokoRuoka: String
 }
 
 impl Database {
@@ -24,5 +28,17 @@ impl Database {
         let ruoka = sqlx::query!("SELECT KokoRuoka FROM Ruokalista WHERE PVM = ?", date)
             .fetch_one(&mut conn).await?;
         Ok(ruoka.KokoRuoka)
+    }
+    pub async fn nouda_viikko(&self, alku:String, loppu:String) -> Option<Vec<String>> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let viikko = match sqlx::query_as!(RuokalistaEntry, "SELECT KokoRuoka FROM Ruokalista WHERE PVM BETWEEN ? AND ?", alku, loppu)
+            .fetch_all(&mut conn).await {
+                Ok(r) => r,
+                Err(e) => {
+                    info!("Error while querying for foods between `{}` and `{}`: {}", alku, loppu, e);
+                    return None;
+                },
+            };
+        Some(viikko.iter().map(|r| r.KokoRuoka.clone()).collect())
     }
 }
