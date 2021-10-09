@@ -23,11 +23,13 @@ impl Database {
             .fetch_one(&mut conn).await?;
         Ok(ruoka)
     }
-    pub async fn nouda_ruoka_by_date(&self, date: String) -> Result<String, sqlx::Error> {
+    pub async fn nouda_ruoka_by_date(&self, date: String) -> Result<Option<String>, sqlx::Error> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let ruoka = sqlx::query!("SELECT KokoRuoka FROM Ruokalista WHERE PVM = ?", date)
-            .fetch_one(&mut conn).await?;
-        Ok(ruoka.KokoRuoka)
+        match sqlx::query!("SELECT KokoRuoka FROM Ruokalista WHERE PVM = ?", date)
+            .fetch_one(&mut conn).await {
+                Ok(r) => Ok(Some(r.KokoRuoka)),
+                Err(_) => Ok(None)
+            }
     }
     pub async fn nouda_viikko(&self, alku:String, loppu:String) -> Option<Vec<String>> {
         let mut conn = self.pool.acquire().await.unwrap();
