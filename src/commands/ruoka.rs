@@ -24,7 +24,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
     };
 
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-    let ruoka = match db.nouda_ruoka_by_date(date.to_string()).await? {
+    let ruoka = match db.nouda_ruoka_ja_id_by_date(date.to_string()).await? {
         Some(r) => r,
         None => {
             match date.weekday().num_days_from_monday() {
@@ -33,7 +33,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
                     info!("No food was found for {} which is on a weekend. Checking the monday of the following week!", date.to_string());
                     let diff:i64 = d.try_into().unwrap();
                     date = date+Duration::days(7-diff);
-                    db.nouda_ruoka_by_date(date.to_string()).await.unwrap().unwrap()
+                    db.nouda_ruoka_ja_id_by_date(date.to_string()).await.unwrap().unwrap()
                 },
                 _ => {
                     msg.channel_id.say(&ctx.http, format!("Ei ruokaa päivälle `{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
@@ -45,10 +45,17 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
         }
     };
     let viikonpaiva = num_to_paiva(date.weekday().num_days_from_monday().try_into().unwrap()).unwrap();
+    let kuva:String = match db.ruokakuva_by_id(ruoka.RuokaID).await {
+        Some(r) => r,
+        _ => {
+            "".to_string()
+        },
+    };
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
             e.color(serenity::utils::Color::GOLD);
-            e.field(format!("{}: {}", viikonpaiva, date.format("%d/%m/%Y").to_string()), ruoka, false)
+            e.field(format!("{}: {}", viikonpaiva, date.format("%d/%m/%Y").to_string()), ruoka.KokoRuoka, false);
+            e.image(format!("http://ruoka.lajp.fi/{}", kuva))
         })
     }).await?;
     Ok(())

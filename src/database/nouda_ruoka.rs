@@ -6,6 +6,10 @@ pub struct Ruoka {
     pub RuokaID: i32,
     pub RuokaName: String
 }
+pub struct RuokaJaId {
+    pub RuokaID: i32,
+    pub KokoRuoka: String
+}
 pub struct RuokalistaEntry {
     KokoRuoka: String
 }
@@ -28,6 +32,14 @@ impl Database {
         match sqlx::query!("SELECT KokoRuoka FROM Ruokalista WHERE PVM = ?", date)
             .fetch_one(&mut conn).await {
                 Ok(r) => Ok(Some(r.KokoRuoka)),
+                Err(_) => Ok(None)
+            }
+    }
+    pub async fn nouda_ruoka_ja_id_by_date(&self, date: String) -> Result<Option<RuokaJaId>, sqlx::Error> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        match sqlx::query_as!(RuokaJaId, "SELECT RuokaID, KokoRuoka FROM Ruokalista WHERE PVM = ?", date)
+            .fetch_one(&mut conn).await {
+                Ok(r) => Ok(Some(r)),
                 Err(_) => Ok(None)
             }
     }
