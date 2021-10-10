@@ -5,22 +5,33 @@ mod util;
 use std::{collections::HashSet, env, sync::Arc};
 
 use database::*;
-use commands::{ruoka::*, viikko::*, kuva::*};
+use commands::{ruoka::*, viikko::*, kuva::*, image_provider_msg::*, admin::*};
 use serenity::{
     async_trait,
     client::bridge::gateway::ShardManager,
     framework::{standard::macros::group, StandardFramework},
     http::Http,
-    model::{event::ResumedEvent, gateway::Ready},
+    model::{event::ResumedEvent, gateway::Ready, channel::Message},
     prelude::*,
 };
+
 use tracing::{error, info};
 
 pub struct ShardManagerContainer;
 
+pub struct RoleIDs {
+    pub admin: u64,
+    pub image_provider: u64,
+}
+
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
+
+impl TypeMapKey for RoleIDs {
+    type Value = Arc<RoleIDs>;
+}
+
 
 struct Handler;
 
@@ -29,9 +40,16 @@ impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         info!("Connected as {}", ready.user.name);
     }
-
     async fn resume(&self, _: Context, _: ResumedEvent) {
         info!("Resumed");
+    }
+    async fn message(&self, ctx:Context, msg:Message) {
+        if msg.author.id.0 == ctx.data.read().await.get::<RoleIDs>().unwrap().clone().admin {
+            handle_admin_message(ctx, msg).await.unwrap();
+        }
+        else if msg.author.id.0 == ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider {
+            handle_image_provider_message(ctx, msg).await.unwrap();
+        }
     }
 }
 
@@ -54,6 +72,18 @@ async fn main() {
     let database = Database::new().await;
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+
+    let admin = match env::var("ADMIN_ID") {
+        Ok(i) => i.parse::<u64>().unwrap(),
+        Err(_) => 0
+    };
+
+    let image_provider = match env::var("IMAGE_PROVIDER_ID") {
+        Ok(i) => i.parse::<u64>().unwrap(),
+        Err(_) => 0
+    };
+
+    let roleids = RoleIDs { admin, image_provider };
 
     let http = Http::new_with_token(&token);
 
@@ -80,6 +110,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
+        data.insert::<RoleIDs>(Arc::new(roleids));
         data.insert::<Database>(Arc::new(database));
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
     }

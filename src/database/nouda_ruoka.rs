@@ -21,6 +21,12 @@ impl Database {
             .fetch_one(&mut conn).await?;
         Ok(ruoka)
     }
+    pub async fn nouda_ruoka_by_name_case_insensitive(&self, nimi: String) -> Result<Ruoka, sqlx::Error> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let ruoka: Ruoka = sqlx::query_as!(Ruoka, "SELECT RuokaID, RuokaName FROM Ruoat WHERE LOWER(RuokaName) = LOWER(?)", nimi)
+            .fetch_one(&mut conn).await?;
+        Ok(ruoka)
+    }
     pub async fn nouda_ruoka_by_id(&self, id: u32) -> Result<Ruoka, sqlx::Error> {
         let mut conn = self.pool.acquire().await.unwrap();
         let ruoka: Ruoka = sqlx::query_as!(Ruoka, "SELECT RuokaID, RuokaName FROM Ruoat WHERE RuokaID = ?", id)

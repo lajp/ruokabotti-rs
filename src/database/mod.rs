@@ -4,6 +4,7 @@ use serenity::prelude::TypeMapKey;
 use sqlx::MySqlPool;
 pub mod nouda_ruoka;
 pub mod ruokakuva;
+pub mod lisaa_ruoka;
 
 pub struct Database {
     pool: MySqlPool,
