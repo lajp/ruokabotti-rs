@@ -42,7 +42,7 @@ pub async fn handle_image_provider_message(ctx: Context, msg: Message) -> Result
             let mut f = File::create(&filepath).await.unwrap();
             io::copy(&mut content, &mut f).await.unwrap();
             info!("Wrote {} bytes into the file `{}`", msg.attachments[0].size, filename);
-            db.lisaa_kuva_ruokaan(ruoka.RuokaID, filename.clone()).await.unwrap();
+            db.lisaa_kuva_ruokaan(ruoka.RuokaID, filename.replace(" ", "%20")).await.unwrap();
             msg.reply(&ctx.http, format!(":+1: Kuva `{}` ladattiin ja lisättiin tietokantaan!", filename)).await.unwrap();
         }
     }
