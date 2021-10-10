@@ -48,7 +48,7 @@ impl Database {
     }
     pub async fn ruokakuvat_by_query(&self, query:String) -> Option<Vec<String>> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let ruokakuvat = match sqlx::query!("SELECT ImageName FROM Ruoat WHERE LOWER(RuokaName) LIKE LOWER( ? )", format!("%{}%", query))
+        let ruokakuvat = match sqlx::query!("SELECT ImageName FROM Ruoat WHERE LOWER(ImageName) LIKE LOWER( ? )", format!("%{}%", query))
             .fetch_all(&mut conn).await {
                 Ok(r) => r,
                 Err(e) => {
