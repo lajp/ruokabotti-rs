@@ -5,15 +5,17 @@ mod util;
 use std::{collections::HashSet, env, sync::Arc};
 
 use database::*;
-use commands::{ruoka::*, viikko::*, kuva::*, image_provider_msg::*, admin::*};
+use commands::{ruoka::*, viikko::*, kuva::*, image_provider_msg::*, admin::*, ruokastats::*};
 use serenity::{
     async_trait,
     client::bridge::gateway::ShardManager,
     framework::{standard::macros::group, StandardFramework},
     http::Http,
-    model::{event::ResumedEvent, gateway::Ready, channel::Message},
+    builder::CreateEmbed,
+    model::{event::ResumedEvent, gateway::Ready, channel::Message, channel::Reaction},
     prelude::*,
 };
+use arvio::Statistiikka;
 
 use tracing::{error, info};
 
@@ -51,10 +53,64 @@ impl EventHandler for Handler {
             handle_image_provider_message(ctx, msg).await.unwrap();
         }
     }
+    async fn reaction_add(&self, ctx:Context, reaction:Reaction) {
+        let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
+        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
+            return
+        }
+        else if (0..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
+            let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
+            let kokoruoka = &message.embeds[0].fields[0].value;
+            let ruoka = &kokoruoka[..match kokoruoka.find(",") {
+                Some(n) => n,
+                None => kokoruoka.len()
+            }];
+            info!("Reaction {} added by user `{}` to food: {}", &reaction.emoji, reaction.user_id.unwrap().0, ruoka);
+            let db = ctx.data.read().await.get::<Database>().unwrap().clone();
+            db.lisaa_arvio(reaction.user_id.unwrap().0, reaction.emoji.to_string()[..1].parse::<i32>().unwrap(), ruoka.to_string()).await;
+            let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.to_string()).await;
+            let keskiarvo = match stats.keskiarvo {
+                Some(s) => s.round(2).to_string(),
+                None => "N/A".to_string(),
+            };
+            let mut orig_embed = message.embeds[0].clone();
+            let orig_foodstring = &orig_embed.fields[0].value;
+            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find("(").unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
+            orig_embed.fields[0].value = foodstring;
+            message.edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed))).await.unwrap();
+        }
+    }
+    async fn reaction_remove(&self, ctx:Context, reaction:Reaction) {
+        let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
+        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
+            return
+        }
+        else if (0..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
+            let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
+            let kokoruoka = &message.embeds[0].fields[0].value;
+            let ruoka = &kokoruoka[..match kokoruoka.find(",") {
+                Some(n) => n,
+                None => kokoruoka.len()
+            }];
+            info!("Reaction {} removed by user `{}` from food: {}", &reaction.emoji, reaction.user_id.unwrap().0, ruoka);
+            let db = ctx.data.read().await.get::<Database>().unwrap().clone();
+            db.poista_arvio(reaction.user_id.unwrap().0, reaction.emoji.to_string()[..1].parse::<i32>().unwrap(), ruoka.to_string()).await;
+            let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.to_string()).await;
+            let keskiarvo = match stats.keskiarvo {
+                Some(s) => s.round(2).to_string(),
+                None => "N/A".to_string(),
+            };
+            let mut orig_embed = message.embeds[0].clone();
+            let orig_foodstring = &orig_embed.fields[0].value;
+            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find("(").unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
+            orig_embed.fields[0].value = foodstring;
+            message.edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed))).await.unwrap();
+        }
+    }
 }
 
 #[group]
-#[commands(ruoka, viikko, kuva)]
+#[commands(ruoka, viikko, kuva, ruokastats)]
 struct General;
 
 #[tokio::main]

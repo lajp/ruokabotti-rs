@@ -22,7 +22,7 @@ features = ["blocking"]
 
 [dependencies.sqlx]
 version = "*"
-features = ["runtime-tokio-rustls", "mysql"]
+features = ["runtime-tokio-rustls", "mysql", "bigdecimal"]
 
 [dependencies]
 regex = {version = "*", features = ["default"]}

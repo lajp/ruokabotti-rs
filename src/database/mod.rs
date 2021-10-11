@@ -5,6 +5,7 @@ use sqlx::MySqlPool;
 pub mod nouda_ruoka;
 pub mod ruokakuva;
 pub mod lisaa_ruoka;
+pub mod arvio;
 
 pub struct Database {
     pool: MySqlPool,

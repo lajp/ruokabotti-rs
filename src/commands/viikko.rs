@@ -8,6 +8,7 @@ use chrono::{Duration, Datelike};
 use std::convert::TryInto;
 use crate::util::dayconvert::*;
 use crate::commands::update_ruokadb::update_ruokadb;
+use crate::arvio::Statistiikka;
 
 #[command]
 pub async fn viikko(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult {
@@ -42,6 +43,20 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args:Args) -> CommandResul
         }
         _ => viikko = viikko
     };
+    let mut keskiarvot = Vec::new();
+    let mut maarat = Vec::new();
+    for (_, ruoka) in viikko.iter().enumerate() {
+        let stat: Statistiikka = db.anna_ruoan_statistiikka(ruoka[..match ruoka.find(",") {
+            Some(n) => n,
+            None => ruoka.len()
+        }].to_string()).await;
+        let keskiarvo = match stat.keskiarvo.as_ref() {
+            Some(s) => s.round(2).to_string(),
+            None => "N/A".to_string(),
+        };
+        keskiarvot.push(keskiarvo);
+        maarat.push(stat.maara);
+    }
     info!("Sending week `{}-{}`", monday.to_string(), sunday.to_string());
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
@@ -49,7 +64,8 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args:Args) -> CommandResul
             e.color(serenity::utils::Color::PURPLE);
             for (paiva, ruoka) in viikko.iter().enumerate()
             {
-                e.field(format!("{}: {}", num_to_paiva(paiva).unwrap(), (monday+Duration::days(paiva.try_into().unwrap())).format("%d/%m/%Y")), ruoka, false);
+                e.field(format!("{}: {}", num_to_paiva(paiva).unwrap(), (monday+Duration::days(paiva.try_into().unwrap())).format("%d/%m/%Y")),
+                    format!("{} \n(:star:{}, {} arvostelija(a))", ruoka, keskiarvot[paiva], maarat[paiva]), false);
             }
             e
         })

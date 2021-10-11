@@ -1,4 +1,5 @@
 use serenity::framework::standard::{macros::command, Args, CommandResult};
+use serenity::model::channel::ReactionType;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use crate::database::*;
@@ -7,6 +8,7 @@ use crate::util::dayconvert::*;
 use chrono::*;
 use std::convert::TryInto;
 use crate::commands::update_ruokadb::update_ruokadb;
+use crate::arvio::Statistiikka;
 
 #[command]
 pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult {
@@ -71,12 +73,24 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
             "".to_string()
         },
     };
-    msg.channel_id.send_message(&ctx.http, |m| {
+    let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.KokoRuoka[..match ruoka.KokoRuoka.find(",") {
+        Some(n) => n,
+        None => ruoka.KokoRuoka.len()
+    }].to_string()).await;
+    let keskiarvo = match stats.keskiarvo.as_ref() {
+        Some(s) => s.round(2).to_string(),
+        None => "N/A".to_string(),
+    };
+    let message =  msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
             e.color(serenity::utils::Color::GOLD);
-            e.field(format!("{}: {}", viikonpaiva, date.format("%d/%m/%Y").to_string()), ruoka.KokoRuoka, false);
+            e.field(format!("{}: {}", viikonpaiva, date.format("%d/%m/%Y").to_string()), format!("{} \n(:star:{}, {} arvostelija(a))", ruoka.KokoRuoka,
+                    keskiarvo, stats.maara), false);
             e.image(format!("http://ruoka.lajp.fi/{}", kuva))
         })
     }).await?;
+    for rating in 0..6 {
+        message.react(&ctx.http, ReactionType::Unicode(format!("{}\u{fe0f}\u{20e3}", rating.to_string()))).await.unwrap();
+    }
     Ok(())
 }
