@@ -7,6 +7,7 @@ use crate::database::*;
 use chrono::{Duration, Datelike};
 use std::convert::TryInto;
 use crate::util::dayconvert::*;
+use crate::commands::update_ruokadb::update_ruokadb;
 
 #[command]
 pub async fn viikko(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult {
@@ -28,13 +29,18 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args:Args) -> CommandResul
     let monday = date+Duration::days(-difftomon);
     let sunday = date+Duration::days(6-difftomon);
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-    let viikko = match db.nouda_viikko(monday.to_string(), sunday.to_string()).await {
-        Some(v) => v,
-        None => {
-            msg.channel_id.say(&ctx.http, format!("Ei ruokaa viikolle {}-{}. Jos tämä mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
-                monday.format("%d/%m"), sunday.format("%d/%m/%Y"))).await?;
-            return Ok(())
+    let mut viikko = db.nouda_viikko(monday.to_string(), sunday.to_string()).await.unwrap();
+    match viikko.len() {
+        0 => {
+            update_ruokadb(ctx, None).await.ok();
+            viikko = db.nouda_viikko(monday.to_string(), sunday.to_string()).await.unwrap();
+            if viikko.len() == 0 {
+                msg.channel_id.say(&ctx.http, format!("Ei ruokia viikolle `{}-{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
+                    monday.format("%d/%m"), sunday.format("%d/%m/%Y"))).await?;
+                return Ok(())
+            }
         }
+        _ => viikko = viikko
     };
     info!("Sending week `{}-{}`", monday.to_string(), sunday.to_string());
     msg.channel_id.send_message(&ctx.http, |m| {

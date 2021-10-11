@@ -6,6 +6,7 @@ use tracing::{info, error};
 use crate::util::dayconvert::*;
 use chrono::*;
 use std::convert::TryInto;
+use crate::commands::update_ruokadb::update_ruokadb;
 
 #[command]
 pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult {
@@ -33,13 +34,32 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
                     info!("No food was found for {} which is on a weekend. Checking the monday of the following week!", date.to_string());
                     let diff:i64 = d.try_into().unwrap();
                     date = date+Duration::days(7-diff);
-                    db.nouda_ruoka_ja_id_by_date(date.to_string()).await.unwrap().unwrap()
+                    match db.nouda_ruoka_ja_id_by_date(date.to_string()).await? {
+                        Some(r) => r,
+                        None => {
+                            update_ruokadb(ctx, None).await.ok();
+                            match db.nouda_ruoka_ja_id_by_date(date.to_string()).await.unwrap() {
+                                Some(r) => r,
+                                None =>  {
+                                    msg.channel_id.say(&ctx.http, format!("Ei ruokaa päivälle `{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
+                                        date.format("%d/%m/%Y"))).await?;
+                                    return Ok(())
+                                }
+                            }
+                        }
+                    }
                 },
                 _ => {
-                    msg.channel_id.say(&ctx.http, format!("Ei ruokaa päivälle `{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
+                    update_ruokadb(ctx, None).await.ok();
+                    match db.nouda_ruoka_ja_id_by_date(date.to_string()).await.unwrap() {
+                    Some(r) => r,
+                    None => {
+                        msg.channel_id.say(&ctx.http, format!("Ei ruokaa päivälle `{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
                         date.format("%d/%m/%Y"))).await?;
-                    error!("A non-weekend date with no food was found: `{}`. This might mean that the foodlist needs to be updated!", date.to_string());
-                    return Ok(())
+                        error!("A non-weekend date with no food was found: `{}`. This might mean that the foodlist needs to be updated!", date.to_string());
+                        return Ok(())
+                        },
+                    }
                 }
             }
         }
