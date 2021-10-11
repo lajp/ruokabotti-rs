@@ -36,7 +36,6 @@ pub async fn parse_lykeion(link: Option<String>) -> Result<Vec<(NaiveDate, Strin
 
     let document = Document::load_mem(&ruokalista).unwrap();
     let mut content = document.extract_text(&[1]).unwrap();
-    fs::write("testilista.txt", &content).await.unwrap();
     content.retain(|c| c != '\n');
     let mut listavec = Vec::new();
     while content.contains("VIIKKO") {
