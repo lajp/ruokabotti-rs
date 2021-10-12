@@ -24,6 +24,7 @@ pub struct ShardManagerContainer;
 pub struct RoleIDs {
     pub admin: u64,
     pub image_provider: u64,
+    pub image_blog: u64,
 }
 
 impl TypeMapKey for ShardManagerContainer {
@@ -50,7 +51,10 @@ impl EventHandler for Handler {
             handle_admin_message(ctx, msg).await.unwrap();
         }
         else if msg.author.id.0 == ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider {
-            handle_image_provider_message(ctx, msg).await.unwrap();
+            let blog_id = ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_blog;
+            if msg.channel_id.0 == blog_id || blog_id == 0 {
+                handle_image_provider_message(ctx, msg).await.unwrap();
+            }
         }
     }
     async fn reaction_add(&self, ctx:Context, reaction:Reaction) {
@@ -139,7 +143,12 @@ async fn main() {
         Err(_) => 0
     };
 
-    let roleids = RoleIDs { admin, image_provider };
+    let image_blog = match env::var("IMAGE_CHANNEL_ID") {
+        Ok(i) => i.parse::<u64>().unwrap(),
+        Err(_) => 0
+    };
+
+    let roleids = RoleIDs { admin, image_provider, image_blog};
 
     let http = Http::new_with_token(&token);
 
