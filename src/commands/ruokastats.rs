@@ -14,11 +14,12 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, mut args:Args) -> CommandR
     else {
         userid = msg.author.id.0;
     }
+    let user = &mut ctx.http.get_user(userid).await.unwrap();
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
     let stats = match db.anna_kayttajan_statistiikka(userid).await {
         Some(s) => s,
         None => {
-            msg.channel_id.say(&ctx.http, format!("Käyttäjällä {} ei ole yhtään arvosteltua ruokaa!", msg.author.name)).await.unwrap();
+            msg.channel_id.say(&ctx.http, format!("Käyttäjällä {} ei ole yhtään arvosteltua ruokaa!", user.name)).await.unwrap();
             return Ok(())
         }
     };
@@ -27,7 +28,7 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, mut args:Args) -> CommandR
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
             e.color(serenity::utils::Color::BLUE);
-            e.title(format!("Käyttäjän {} ruokastatsit", msg.author.name));
+            e.title(format!("Käyttäjän {} ruokastatsit", user.name));
             e.field("Arvostellut ruoat", stats.maara.to_string(), false);
             e.field("Keskimääräinen arvio", stats.keskiarvo.unwrap().to_string(), false);
             e.field("Lemppariruoka", format!("{}(:star:{})", paras, stats.paras.arvio.unwrap().round(2).to_string()), false);
