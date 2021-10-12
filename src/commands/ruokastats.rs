@@ -29,7 +29,7 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, mut args:Args) -> CommandR
             e.color(serenity::utils::Color::BLUE);
             e.title(format!("Käyttäjän {} ruokastatsit", msg.author.name));
             e.field("Arvostellut ruoat", stats.maara.to_string(), false);
-            e.field("Keskimaarainen arvio", stats.keskiarvo.unwrap().to_string(), false);
+            e.field("Keskimääräinen arvio", stats.keskiarvo.unwrap().to_string(), false);
             e.field("Lemppariruoka", format!("{}(:star:{})", paras, stats.paras.arvio.unwrap().round(2).to_string()), false);
             e.field("Inhokkiruoka", format!("{}(:star:{})", huonoin, stats.huonoin.arvio.unwrap().round(2).to_string()), false)
         })

@@ -58,7 +58,7 @@ impl Database {
             0 => return None,
             _ => (),
         }
-        let keskiarvo = sqlx::query!("SELECT AVG(DISTINCT(RuokaID)) AS keskiarvo FROM Arvostelut WHERE KayttajaID = ?", userid).fetch_one(&mut conn).await.unwrap().keskiarvo;
+        let keskiarvo = sqlx::query!("SELECT AVG(Arvosana) AS keskiarvo FROM Arvostelut WHERE KayttajaID = ?", userid).fetch_one(&mut conn).await.unwrap().keskiarvo;
         let paras = sqlx::query_as!(ArvioituRuoka, "SELECT RuokaID as id, AVG(Arvosana) as arvio FROM Arvostelut WHERE KayttajaID = ? GROUP BY RuokaID ORDER BY AVG(Arvosana) DESC",userid).fetch_one(&mut conn).await.unwrap();
         let huonoin = sqlx::query_as!(ArvioituRuoka, "SELECT RuokaID as id, AVG(Arvosana) as arvio FROM Arvostelut WHERE KayttajaID = ? GROUP BY RuokaID ORDER BY AVG(Arvosana) ASC",userid).fetch_one(&mut conn).await.unwrap();
         Some(KayttajaStatistiikka{keskiarvo, maara, paras, huonoin})
