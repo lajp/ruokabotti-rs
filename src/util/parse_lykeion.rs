@@ -18,7 +18,7 @@ pub async fn parse_lykeion(link: Option<String>) -> Result<Vec<(NaiveDate, Strin
             .await
             .unwrap();
 
-        url = Regex::new(r"https://.*lukio.*\.pdf").unwrap().find(&body).unwrap().as_str().to_string();
+        url = Regex::new(r"https://.*lukio.*\.pdf").unwrap().find_iter(&body).into_iter().last().unwrap().as_str().to_string();
         info!("Found the link to the latest pdf: {}", &url);
     }
     else {
