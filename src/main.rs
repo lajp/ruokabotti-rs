@@ -62,7 +62,7 @@ impl EventHandler for Handler {
         if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
             return
         }
-        else if (0..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
+        else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
             let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
             let kokoruoka = &message.embeds[0].fields[0].value;
             let ruoka = &kokoruoka[..match kokoruoka.find(',') {
@@ -89,7 +89,7 @@ impl EventHandler for Handler {
         if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
             return
         }
-        else if (0..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
+        else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
             let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
             let kokoruoka = &message.embeds[0].fields[0].value;
             let ruoka = &kokoruoka[..match kokoruoka.find(',') {

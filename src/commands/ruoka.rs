@@ -89,7 +89,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
             e.image(format!("http://ruoka.lajp.fi/{}", kuva))
         })
     }).await?;
-    for rating in 0..6 {
+    for rating in 1..6 {
         message.react(&ctx.http, ReactionType::Unicode(format!("{}\u{fe0f}\u{20e3}", rating.to_string()))).await.unwrap();
     }
     Ok(())
