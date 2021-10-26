@@ -1,6 +1,9 @@
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+use crate::RoleIDs;
+use serenity::http::GuildPagination;
 use crate::commands::update_ruokadb::*;
+use tracing::info;
 
 pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> {
     if msg.content.starts_with("!update") {
@@ -19,5 +22,30 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
             }
         };
     }
-    unimplemented!()
+    else if msg.content.starts_with("!broadcast") {
+        if msg.content.len() == 10 {
+            msg.reply(&ctx.http, "Please provide the message to be broadcasted!").await.unwrap();
+        }
+        else {
+            let image_blog = ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_blog;
+            let mainserver = ctx.http.get_channel(image_blog).await.unwrap().guild().unwrap().guild_id;
+            let message = msg.content[msg.content.find(' ').unwrap()+1..].to_string();
+            for channel in mainserver.channels(&ctx.http).await.unwrap().into_values() {
+                if channel.is_text_based() {
+                    channel.id.say(&ctx.http, format!("@everyone {}", message)).await.unwrap();
+                    break;
+                }
+            }
+            for guild in ctx.http.get_guilds(&GuildPagination::After(mainserver), 100).await.unwrap() {
+                info!("Broadcasting {} on {}", message, guild.name);
+                for channel in guild.id.channels(&ctx.http).await.unwrap().into_values() {
+                    if channel.is_text_based() {
+                        channel.id.say(&ctx.http, format!("@everyone {}", message)).await.unwrap();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
