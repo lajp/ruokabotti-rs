@@ -35,7 +35,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
                     msg.channel_id.say(&ctx.http, format!("Ei ruokaa päivälle `{}`! Koska kyseessä on viikonloppu, kokeillaan vielä seuraavan viikon maanantaita.", date.format("%d/%m/%Y"))).await?;
                     info!("No food was found for {} which is on a weekend. Checking the monday of the following week!", date.to_string());
                     let diff:i64 = d.try_into().unwrap();
-                    date = date+Duration::days(7-diff);
+                    date += Duration::days(7-diff);
                     match db.nouda_ruoka_ja_id_by_date(date.to_string()).await? {
                         Some(r) => r,
                         None => {
@@ -73,7 +73,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args:Args) -> CommandResult
             "".to_string()
         },
     };
-    let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.KokoRuoka[..match ruoka.KokoRuoka.find(",") {
+    let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.KokoRuoka[..match ruoka.KokoRuoka.find(',') {
         Some(n) => n,
         None => ruoka.KokoRuoka.len()
     }].to_string()).await;

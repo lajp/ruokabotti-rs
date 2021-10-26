@@ -65,7 +65,7 @@ impl EventHandler for Handler {
         else if (0..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
             let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
             let kokoruoka = &message.embeds[0].fields[0].value;
-            let ruoka = &kokoruoka[..match kokoruoka.find(",") {
+            let ruoka = &kokoruoka[..match kokoruoka.find(',') {
                 Some(n) => n,
                 None => kokoruoka.len()
             }];
@@ -79,7 +79,7 @@ impl EventHandler for Handler {
             };
             let mut orig_embed = message.embeds[0].clone();
             let orig_foodstring = &orig_embed.fields[0].value;
-            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find("(").unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
+            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find('(').unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
             orig_embed.fields[0].value = foodstring;
             message.edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed))).await.unwrap();
         }
@@ -92,7 +92,7 @@ impl EventHandler for Handler {
         else if (0..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
             let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
             let kokoruoka = &message.embeds[0].fields[0].value;
-            let ruoka = &kokoruoka[..match kokoruoka.find(",") {
+            let ruoka = &kokoruoka[..match kokoruoka.find(',') {
                 Some(n) => n,
                 None => kokoruoka.len()
             }];
@@ -106,7 +106,7 @@ impl EventHandler for Handler {
             };
             let mut orig_embed = message.embeds[0].clone();
             let orig_foodstring = &orig_embed.fields[0].value;
-            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find("(").unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
+            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find('(').unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
             orig_embed.fields[0].value = foodstring;
             message.edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed))).await.unwrap();
         }

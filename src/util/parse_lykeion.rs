@@ -1,5 +1,4 @@
 use lopdf::Document;
-use tokio::fs;
 use regex::Regex;
 use tracing::info;
 use chrono::{Duration, NaiveDate};
@@ -46,11 +45,11 @@ pub async fn parse_lykeion(link: Option<String>) -> Result<Vec<(NaiveDate, Strin
         };
         let week = &content[firstindex..secondindex+firstindex+1];
         let week = &week.split_whitespace().collect::<Vec<&str>>().join(" "); // trim excess whitespace
-        let pvm_str = week.split(" ").collect::<Vec<&str>>()[2];
-        let sunpvm = NaiveDate::parse_from_str(pvm_str.split("-").collect::<Vec<&str>>()[1], "%d.%m.%Y").unwrap();
+        let pvm_str = week.split(' ').collect::<Vec<&str>>()[2];
+        let sunpvm = NaiveDate::parse_from_str(pvm_str.split('-').collect::<Vec<&str>>()[1], "%d.%m.%Y").unwrap();
         let mut pvm = chrono::offset::Local::today().naive_local();
         let mut foodvec = Vec::new();
-        for item in week.split(" ").collect::<Vec<&str>>() {
+        for item in week.split(' ').collect::<Vec<&str>>() {
             match item {
                 "Maanantai" => {
                     pvm = sunpvm-Duration::days(6);
@@ -82,7 +81,7 @@ pub async fn parse_lykeion(link: Option<String>) -> Result<Vec<(NaiveDate, Strin
                     pvm = sunpvm-Duration::days(1);
                 },
                 _ => {
-                    foodvec.push(item.clone());
+                    foodvec.push(item);
                 },
             }
         };
