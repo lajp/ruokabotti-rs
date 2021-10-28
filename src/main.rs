@@ -22,8 +22,8 @@ use tracing::{error, info};
 pub struct ShardManagerContainer;
 
 pub struct RoleIDs {
-    pub admin: u64,
-    pub image_provider: u64,
+    pub admin: Vec<u64>,
+    pub image_provider: Vec<u64>,
     pub image_blog: u64,
 }
 
@@ -32,7 +32,7 @@ impl TypeMapKey for ShardManagerContainer {
 }
 
 impl TypeMapKey for RoleIDs {
-    type Value = Arc<RoleIDs>;
+    type Value = RoleIDs;
 }
 
 
@@ -47,10 +47,10 @@ impl EventHandler for Handler {
         info!("Resumed");
     }
     async fn message(&self, ctx:Context, msg:Message) {
-        if msg.author.id.0 == ctx.data.read().await.get::<RoleIDs>().unwrap().clone().admin {
+        if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().admin.contains(&msg.author.id.0) {
             handle_admin_message(ctx, msg).await.unwrap();
         }
-        else if msg.author.id.0 == ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider {
+        else if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider.contains(&msg.author.id.0) {
             let blog_id = ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_blog;
             if msg.channel_id.0 == blog_id || blog_id == 0 {
                 handle_image_provider_message(ctx, msg).await.unwrap();
@@ -148,7 +148,7 @@ async fn main() {
         Err(_) => 0
     };
 
-    let roleids = RoleIDs { admin, image_provider, image_blog};
+    let roleids = RoleIDs { admin: vec![admin], image_provider: vec![image_provider], image_blog};
 
     let http = Http::new_with_token(&token);
 
@@ -175,7 +175,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<RoleIDs>(Arc::new(roleids));
+        data.insert::<RoleIDs>(roleids);
         data.insert::<Database>(Arc::new(database));
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
     }
