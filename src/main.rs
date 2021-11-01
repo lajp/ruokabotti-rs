@@ -48,7 +48,7 @@ impl EventHandler for Handler {
     }
     async fn message(&self, ctx:Context, msg:Message) {
         if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().admin.contains(&msg.author.id.0) {
-            handle_admin_message(ctx, msg).await.unwrap();
+            handle_admin_message(ctx.clone(), msg.clone()).await.unwrap();
         }
         if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider.contains(&msg.author.id.0) {
             let blog_id = ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_blog;
