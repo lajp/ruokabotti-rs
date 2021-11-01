@@ -1,0 +1,27 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Start MySQL
+        run: sudo systemctl start mysql
+      - name: Install database
+        run: mysql mysql -u root -proot< database.sql
+      - name: Build
+        env:
+          DATABASE_URL: mysql://root:root@localhost:3306/RuokaDB 
+        run: cargo build --release
+      - uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: target/release/ruokabotti-rs
