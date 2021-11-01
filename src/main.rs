@@ -50,7 +50,7 @@ impl EventHandler for Handler {
         if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().admin.contains(&msg.author.id.0) {
             handle_admin_message(ctx, msg).await.unwrap();
         }
-        else if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider.contains(&msg.author.id.0) {
+        if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider.contains(&msg.author.id.0) {
             let blog_id = ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_blog;
             if msg.channel_id.0 == blog_id || blog_id == 0 {
                 handle_image_provider_message(ctx, msg).await.unwrap();
