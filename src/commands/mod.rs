@@ -1,7 +1,7 @@
-pub mod ruoka;
-pub mod viikko;
-pub mod kuva;
-pub mod image_provider_msg;
 pub mod admin;
-pub mod update_ruokadb;
+pub mod image_provider_msg;
+pub mod kuva;
+pub mod ruoka;
 pub mod ruokastats;
+pub mod update_ruokadb;
+pub mod viikko;

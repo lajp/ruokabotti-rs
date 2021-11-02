@@ -1,6 +1,6 @@
-use serenity::prelude::*;
 use crate::database::*;
 use crate::util::parse_lykeion::*;
+use serenity::prelude::*;
 use tracing::info;
 
 pub async fn update_ruokadb(ctx: &Context, link: Option<String>) -> Result<(), ()> {

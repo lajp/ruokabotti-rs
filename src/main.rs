@@ -4,18 +4,18 @@ mod util;
 
 use std::{collections::HashSet, env, sync::Arc};
 
+use arvio::Statistiikka;
+use commands::{admin::*, image_provider_msg::*, kuva::*, ruoka::*, ruokastats::*, viikko::*};
 use database::*;
-use commands::{ruoka::*, viikko::*, kuva::*, image_provider_msg::*, admin::*, ruokastats::*};
 use serenity::{
     async_trait,
+    builder::CreateEmbed,
     client::bridge::gateway::ShardManager,
     framework::{standard::macros::group, StandardFramework},
     http::Http,
-    builder::CreateEmbed,
-    model::{event::ResumedEvent, gateway::Ready, channel::Message, channel::Reaction},
+    model::{channel::Message, channel::Reaction, event::ResumedEvent, gateway::Ready},
     prelude::*,
 };
-use arvio::Statistiikka;
 
 use tracing::{error, info};
 
@@ -35,7 +35,6 @@ impl TypeMapKey for RoleIDs {
     type Value = RoleIDs;
 }
 
-
 struct Handler;
 
 #[async_trait]
@@ -46,32 +45,72 @@ impl EventHandler for Handler {
     async fn resume(&self, _: Context, _: ResumedEvent) {
         info!("Resumed");
     }
-    async fn message(&self, ctx:Context, msg:Message) {
-        if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().admin.contains(&msg.author.id.0) {
-            handle_admin_message(ctx.clone(), msg.clone()).await.unwrap();
+    async fn message(&self, ctx: Context, msg: Message) {
+        if ctx
+            .data
+            .read()
+            .await
+            .get::<RoleIDs>()
+            .unwrap()
+            .clone()
+            .admin
+            .contains(&msg.author.id.0)
+        {
+            handle_admin_message(ctx.clone(), msg.clone())
+                .await
+                .unwrap();
         }
-        if ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_provider.contains(&msg.author.id.0) {
-            let blog_id = ctx.data.read().await.get::<RoleIDs>().unwrap().clone().image_blog;
+        if ctx
+            .data
+            .read()
+            .await
+            .get::<RoleIDs>()
+            .unwrap()
+            .clone()
+            .image_provider
+            .contains(&msg.author.id.0)
+        {
+            let blog_id = ctx
+                .data
+                .read()
+                .await
+                .get::<RoleIDs>()
+                .unwrap()
+                .clone()
+                .image_blog;
             if msg.channel_id.0 == blog_id || blog_id == 0 {
                 handle_image_provider_message(ctx, msg).await.unwrap();
             }
         }
     }
-    async fn reaction_add(&self, ctx:Context, reaction:Reaction) {
+    async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
         let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
         if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
-            return
-        }
-        else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
-            let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
+            return;
+        } else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
+            let message = &mut ctx
+                .http
+                .get_message(reaction.channel_id.0, reaction.message_id.0)
+                .await
+                .unwrap();
             let kokoruoka = &message.embeds[0].fields[0].value;
             let ruoka = &kokoruoka[..match kokoruoka.find(',') {
                 Some(n) => n,
-                None => kokoruoka.len()
+                None => kokoruoka.len(),
             }];
-            info!("Reaction {} added by user `{}` to food: {}", &reaction.emoji, reaction.user_id.unwrap().0, ruoka);
+            info!(
+                "Reaction {} added by user `{}` to food: {}",
+                &reaction.emoji,
+                reaction.user_id.unwrap().0,
+                ruoka
+            );
             let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-            db.lisaa_arvio(reaction.user_id.unwrap().0, reaction.emoji.to_string()[..1].parse::<i32>().unwrap(), ruoka.to_string()).await;
+            db.lisaa_arvio(
+                reaction.user_id.unwrap().0,
+                reaction.emoji.to_string()[..1].parse::<i32>().unwrap(),
+                ruoka.to_string(),
+            )
+            .await;
             let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.to_string()).await;
             let keskiarvo = match stats.keskiarvo {
                 Some(s) => s.round(2).to_string(),
@@ -79,26 +118,46 @@ impl EventHandler for Handler {
             };
             let mut orig_embed = message.embeds[0].clone();
             let orig_foodstring = &orig_embed.fields[0].value;
-            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find('(').unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
+            let foodstring = format!(
+                "{}{}",
+                &orig_foodstring[..orig_foodstring.find('(').unwrap()],
+                format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str()
+            );
             orig_embed.fields[0].value = foodstring;
-            message.edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed))).await.unwrap();
+            message
+                .edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed)))
+                .await
+                .unwrap();
         }
     }
-    async fn reaction_remove(&self, ctx:Context, reaction:Reaction) {
+    async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
         let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
         if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
-            return
-        }
-        else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
-            let message = &mut ctx.http.get_message(reaction.channel_id.0, reaction.message_id.0).await.unwrap();
+            return;
+        } else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
+            let message = &mut ctx
+                .http
+                .get_message(reaction.channel_id.0, reaction.message_id.0)
+                .await
+                .unwrap();
             let kokoruoka = &message.embeds[0].fields[0].value;
             let ruoka = &kokoruoka[..match kokoruoka.find(',') {
                 Some(n) => n,
-                None => kokoruoka.len()
+                None => kokoruoka.len(),
             }];
-            info!("Reaction {} removed by user `{}` from food: {}", &reaction.emoji, reaction.user_id.unwrap().0, ruoka);
+            info!(
+                "Reaction {} removed by user `{}` from food: {}",
+                &reaction.emoji,
+                reaction.user_id.unwrap().0,
+                ruoka
+            );
             let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-            db.poista_arvio(reaction.user_id.unwrap().0, reaction.emoji.to_string()[..1].parse::<i32>().unwrap(), ruoka.to_string()).await;
+            db.poista_arvio(
+                reaction.user_id.unwrap().0,
+                reaction.emoji.to_string()[..1].parse::<i32>().unwrap(),
+                ruoka.to_string(),
+            )
+            .await;
             let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.to_string()).await;
             let keskiarvo = match stats.keskiarvo {
                 Some(s) => s.round(2).to_string(),
@@ -106,9 +165,16 @@ impl EventHandler for Handler {
             };
             let mut orig_embed = message.embeds[0].clone();
             let orig_foodstring = &orig_embed.fields[0].value;
-            let foodstring = format!("{}{}", &orig_foodstring[..orig_foodstring.find('(').unwrap()], format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str());
+            let foodstring = format!(
+                "{}{}",
+                &orig_foodstring[..orig_foodstring.find('(').unwrap()],
+                format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str()
+            );
             orig_embed.fields[0].value = foodstring;
-            message.edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed))).await.unwrap();
+            message
+                .edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed)))
+                .await
+                .unwrap();
         }
     }
 }
@@ -135,20 +201,24 @@ async fn main() {
 
     let admin = match env::var("ADMIN_ID") {
         Ok(i) => i.parse::<u64>().unwrap(),
-        Err(_) => 0
+        Err(_) => 0,
     };
 
     let image_provider = match env::var("IMAGE_PROVIDER_ID") {
         Ok(i) => i.parse::<u64>().unwrap(),
-        Err(_) => 0
+        Err(_) => 0,
     };
 
     let image_blog = match env::var("IMAGE_CHANNEL_ID") {
         Ok(i) => i.parse::<u64>().unwrap(),
-        Err(_) => 0
+        Err(_) => 0,
     };
 
-    let roleids = RoleIDs { admin: vec![admin], image_provider: vec![image_provider], image_blog};
+    let roleids = RoleIDs {
+        admin: vec![admin],
+        image_provider: vec![image_provider],
+        image_blog,
+    };
 
     let http = Http::new_with_token(&token);
 
@@ -159,13 +229,14 @@ async fn main() {
             owners.insert(info.owner.id);
 
             (owners, info.id)
-        },
+        }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
 
     // Create the framework
-    let framework =
-        StandardFramework::new().configure(|c| c.owners(owners).prefix("!")).group(&GENERAL_GROUP);
+    let framework = StandardFramework::new()
+        .configure(|c| c.owners(owners).prefix("!"))
+        .group(&GENERAL_GROUP);
 
     let mut client = Client::builder(&token)
         .framework(framework)
@@ -183,7 +254,9 @@ async fn main() {
     let shard_manager = client.shard_manager.clone();
 
     tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.expect("Could not register ctrl+c handler");
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Could not register ctrl+c handler");
         shard_manager.lock().await.shutdown_all().await;
     });
 

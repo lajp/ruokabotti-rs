@@ -7,7 +7,6 @@ pub fn num_to_paiva(num: usize) -> Option<String> {
         4 => Some("Perjantai".to_string()),
         5 => Some("Lauantai".to_string()),
         6 => Some("Sunnuntai".to_string()),
-        _ => None
+        _ => None,
     }
 }
-
