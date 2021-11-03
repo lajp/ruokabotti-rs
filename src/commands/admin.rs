@@ -3,6 +3,9 @@ use crate::RoleIDs;
 use serenity::http::GuildPagination;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
 use tracing::info;
 
 pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> {
@@ -93,12 +96,38 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                 "admin" => {
                     let mut data = ctx.data.write().await;
                     let roles = &mut data.get_mut::<RoleIDs>().unwrap();
+                    if roles.admin.contains(userid) {
+                        msg.reply(&ctx.http, "The match is already configured!")
+                            .await
+                            .unwrap();
+                        return Ok(());
+                    }
                     roles.admin.push(*userid);
+                    let mut file = OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open("admins.txt")
+                        .unwrap();
+
+                    writeln!(file, "{}", userid).unwrap();
                 }
                 "image_provider" => {
                     let mut data = ctx.data.write().await;
                     let roles = &mut data.get_mut::<RoleIDs>().unwrap();
+                    if roles.image_provider.contains(userid) {
+                        msg.reply(&ctx.http, "The match is already configured!")
+                            .await
+                            .unwrap();
+                        return Ok(());
+                    }
                     roles.image_provider.push(*userid);
+                    let mut file = OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open("image_providers.txt")
+                        .unwrap();
+
+                    writeln!(file, "{}", userid).unwrap();
                 }
                 _ => {
                     msg.reply(&ctx.http, "Invalid role provided!")
@@ -127,12 +156,34 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                 "admin" => {
                     let mut data = ctx.data.write().await;
                     let roles = &mut data.get_mut::<RoleIDs>().unwrap();
+                    if !roles.admin.contains(userid) {
+                        msg.reply(&ctx.http, "No such match configured!")
+                            .await
+                            .unwrap();
+                        return Ok(());
+                    }
                     roles.admin.retain(|&x| x != *userid);
+
+                    let mut adminfile = File::create("admins.txt").unwrap();
+                    for admin in &roles.admin {
+                        writeln!(adminfile, "{}", admin).unwrap();
+                    }
                 }
                 "image_provider" => {
                     let mut data = ctx.data.write().await;
                     let roles = &mut data.get_mut::<RoleIDs>().unwrap();
+                    if !roles.image_provider.contains(userid) {
+                        msg.reply(&ctx.http, "No such match configured!")
+                            .await
+                            .unwrap();
+                        return Ok(());
+                    }
                     roles.image_provider.retain(|&x| x != *userid);
+
+                    let mut image_providerfile = File::create("image_providers.txt").unwrap();
+                    for image_provider in &roles.image_provider {
+                        writeln!(image_providerfile, "{}", image_provider).unwrap();
+                    }
                 }
                 _ => {
                     msg.reply(&ctx.http, "Invalid role provided!")

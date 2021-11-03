@@ -2,7 +2,7 @@ mod commands;
 mod database;
 mod util;
 
-use std::{collections::HashSet, env, sync::Arc};
+use std::{collections::HashSet, env, fs::File, io::BufRead, io::BufReader, sync::Arc};
 
 use arvio::Statistiikka;
 use commands::{admin::*, image_provider_msg::*, kuva::*, ruoka::*, ruokastats::*, viikko::*};
@@ -199,15 +199,25 @@ async fn main() {
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
-    let admin = match env::var("ADMIN_ID") {
-        Ok(i) => i.parse::<u64>().unwrap(),
-        Err(_) => 0,
-    };
+    let mut admins = Vec::new();
+    let adminfile = File::open("admins.txt").unwrap();
+    let adminfilereader = BufReader::new(adminfile);
+    for line in adminfilereader.lines() {
+        match line.unwrap().parse::<u64>() {
+            Ok(i) => admins.push(i),
+            _ => (),
+        };
+    }
 
-    let image_provider = match env::var("IMAGE_PROVIDER_ID") {
-        Ok(i) => i.parse::<u64>().unwrap(),
-        Err(_) => 0,
-    };
+    let mut image_providers = Vec::new();
+    let image_providersfile = File::open("image_providers.txt").unwrap();
+    let image_provider_reader = BufReader::new(image_providersfile);
+    for line in image_provider_reader.lines() {
+        match line.unwrap().parse::<u64>() {
+            Ok(i) => image_providers.push(i),
+            _ => (),
+        };
+    }
 
     let image_blog = match env::var("IMAGE_CHANNEL_ID") {
         Ok(i) => i.parse::<u64>().unwrap(),
@@ -215,8 +225,8 @@ async fn main() {
     };
 
     let roleids = RoleIDs {
-        admin: vec![admin],
-        image_provider: vec![image_provider],
+        admin: admins,
+        image_provider: image_providers,
         image_blog,
     };
 
