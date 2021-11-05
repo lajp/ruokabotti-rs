@@ -5,6 +5,10 @@ pub struct Statistiikka {
     pub keskiarvo: Option<BigDecimal>,
     pub maara: i64,
 }
+pub struct KeskiarvoJaId {
+    pub keskiarvo: Option<BigDecimal>,
+    pub id: i32,
+}
 pub struct ArvioituRuoka {
     pub id: i32,
     pub arvio: Option<BigDecimal>,
@@ -19,9 +23,8 @@ pub struct KayttajaStatistiikka {
 impl Database {
     pub async fn lisaa_arvio(&self, userid: u64, reaktio: i32, ruoka: String) {
         let ruokaid = self.nouda_ruoka_by_name(ruoka).await.unwrap().RuokaID;
-        match self.hae_reaktio(userid, reaktio, ruokaid).await {
-            Ok(_) => return,
-            _ => (),
+        if self.hae_reaktio(userid, reaktio, ruokaid).await.is_ok() {
+            return;
         };
         let mut conn = self.pool.acquire().await.unwrap();
         sqlx::query!(
@@ -62,7 +65,7 @@ impl Database {
     pub async fn anna_ruoan_statistiikka(&self, ruoka: String) -> Statistiikka {
         let ruokaid = self.nouda_ruoka_by_name(ruoka).await.unwrap().RuokaID;
         let mut conn = self.pool.acquire().await.unwrap();
-        let stats = sqlx::query_as!(Statistiikka, "SELECT AVG(Arvosana) AS keskiarvo, COUNT(DISTINCT(KayttajaID)) AS maara FROM Arvostelut WHERE RuokaID = ?" ,ruokaid).fetch_one(&mut conn).await.unwrap();
+        let stats = sqlx::query_as!(Statistiikka, "SELECT AVG(Arvosana) AS keskiarvo, COUNT(DISTINCT(KayttajaID)) AS maara FROM Arvostelut WHERE RuokaID = ?", ruokaid).fetch_one(&mut conn).await.unwrap();
         stats
     }
     pub async fn anna_kayttajan_statistiikka(&self, userid: u64) -> Option<KayttajaStatistiikka> {
@@ -75,9 +78,8 @@ impl Database {
         .await
         .unwrap()
         .maara;
-        match maara {
-            0 => return None,
-            _ => (),
+        if maara == 0 {
+            return None;
         }
         let keskiarvo = sqlx::query!(
             "SELECT AVG(Arvosana) AS keskiarvo FROM Arvostelut WHERE KayttajaID = ?",
@@ -95,5 +97,17 @@ impl Database {
             paras,
             huonoin,
         })
+    }
+    pub async fn anna_parhaat_ruoat(&self, limit: Option<i32>) -> Vec<KeskiarvoJaId> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let ruoat = sqlx::query_as!(KeskiarvoJaId, "SELECT AVG(Arvosana) as keskiarvo, RuokaID as id FROM Arvostelut GROUP BY RuokaID ORDER BY AVG(Arvosana) DESC LIMIT ?;", limit.unwrap_or(5))
+            .fetch_all(&mut conn).await.unwrap();
+        ruoat
+    }
+    pub async fn anna_huonoimmat_ruoat(&self, limit: Option<i32>) -> Vec<KeskiarvoJaId> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let ruoat = sqlx::query_as!(KeskiarvoJaId, "SELECT AVG(Arvosana) as keskiarvo, RuokaID as id FROM Arvostelut GROUP BY RuokaID ORDER BY AVG(Arvosana) ASC LIMIT ?;", limit.unwrap_or(5))
+            .fetch_all(&mut conn).await.unwrap();
+        ruoat
     }
 }

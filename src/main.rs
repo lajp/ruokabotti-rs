@@ -180,7 +180,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(ruoka, viikko, kuva, ruokastats)]
+#[commands(ruoka, viikko, kuva, ruokastats, parhaat, huonoimmat)]
 struct General;
 
 #[tokio::main]
