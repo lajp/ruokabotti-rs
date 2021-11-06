@@ -4,7 +4,6 @@ mod util;
 
 use std::{collections::HashSet, env, fs::File, io::BufRead, io::BufReader, sync::Arc};
 
-use arvio::Statistiikka;
 use commands::{admin::*, image_provider_msg::*, kuva::*, ruoka::*, ruokastats::*, viikko::*};
 use database::*;
 use serenity::{
@@ -111,17 +110,31 @@ impl EventHandler for Handler {
                 ruoka.to_string(),
             )
             .await;
-            let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.to_string()).await;
-            let keskiarvo = match stats.keskiarvo {
-                Some(s) => s.round(2).to_string(),
-                None => "N/A".to_string(),
-            };
+            let maara;
+            let keskiarvo;
+            let positio;
+            if let Ok(stats) = db.anna_ruoan_statistiikka(ruoka.to_string()).await {
+                keskiarvo = match stats.keskiarvo.as_ref() {
+                    Some(s) => s.round(2).to_string(),
+                    None => "N/A".to_string(),
+                };
+                maara = stats.maara.to_string();
+                positio = stats.positio.to_string();
+            } else {
+                maara = "0".to_string();
+                keskiarvo = "N/A".to_string();
+                positio = "N/A".to_string();
+            }
             let mut orig_embed = message.embeds[0].clone();
             let orig_foodstring = &orig_embed.fields[0].value;
             let foodstring = format!(
                 "{}{}",
                 &orig_foodstring[..orig_foodstring.find('(').unwrap()],
-                format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str()
+                format!(
+                    "(**#{}** :star:{}, {} arvostelija(a))",
+                    positio, keskiarvo, maara
+                )
+                .as_str()
             );
             orig_embed.fields[0].value = foodstring;
             message
@@ -158,17 +171,31 @@ impl EventHandler for Handler {
                 ruoka.to_string(),
             )
             .await;
-            let stats: Statistiikka = db.anna_ruoan_statistiikka(ruoka.to_string()).await;
-            let keskiarvo = match stats.keskiarvo {
-                Some(s) => s.round(2).to_string(),
-                None => "N/A".to_string(),
-            };
+            let maara;
+            let keskiarvo;
+            let positio;
+            if let Ok(stats) = db.anna_ruoan_statistiikka(ruoka.to_string()).await {
+                keskiarvo = match stats.keskiarvo.as_ref() {
+                    Some(s) => s.round(2).to_string(),
+                    None => "N/A".to_string(),
+                };
+                maara = stats.maara.to_string();
+                positio = stats.positio.to_string();
+            } else {
+                maara = "0".to_string();
+                keskiarvo = "N/A".to_string();
+                positio = "N/A".to_string();
+            }
             let mut orig_embed = message.embeds[0].clone();
             let orig_foodstring = &orig_embed.fields[0].value;
             let foodstring = format!(
                 "{}{}",
                 &orig_foodstring[..orig_foodstring.find('(').unwrap()],
-                format!("(:star:{}, {} arvostelija(a))", keskiarvo, stats.maara).as_str()
+                format!(
+                    "(**#{}** :star:{}, {} arvostelija(a))",
+                    positio, keskiarvo, maara
+                )
+                .as_str()
             );
             orig_embed.fields[0].value = foodstring;
             message
@@ -203,7 +230,9 @@ async fn main() {
     let adminfile = File::open("admins.txt").unwrap();
     let adminfilereader = BufReader::new(adminfile);
     for line in adminfilereader.lines() {
-        if let Ok(i) = line.unwrap().parse::<u64>() { admins.push(i) };
+        if let Ok(i) = line.unwrap().parse::<u64>() {
+            admins.push(i)
+        };
     }
 
     let mut image_providers = Vec::new();

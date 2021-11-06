@@ -48,8 +48,9 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     };
     let mut keskiarvot = Vec::new();
     let mut maarat = Vec::new();
+    let mut positiot = Vec::new();
     for (_, ruoka) in viikko.iter().enumerate() {
-        let stat: Statistiikka = db
+        let stat: Statistiikka = match db
             .anna_ruoan_statistiikka(
                 ruoka[..match ruoka.find(',') {
                     Some(n) => n,
@@ -57,13 +58,23 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                 }]
                     .to_string(),
             )
-            .await;
+            .await
+        {
+            Ok(s) => s,
+            Err(_) => {
+                keskiarvot.push("N/A".to_string());
+                maarat.push("0".to_string());
+                positiot.push("N/A".to_string());
+                continue;
+            }
+        };
         let keskiarvo = match stat.keskiarvo.as_ref() {
             Some(s) => s.round(2).to_string(),
             None => "N/A".to_string(),
         };
         keskiarvot.push(keskiarvo);
-        maarat.push(stat.maara);
+        maarat.push(stat.maara.to_string());
+        positiot.push(stat.positio.to_string());
     }
     info!(
         "Sending week `{}-{}`",
@@ -87,8 +98,8 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                             (monday + Duration::days(paiva.try_into().unwrap())).format("%d/%m/%Y")
                         ),
                         format!(
-                            "{} \n(:star:{}, {} arvostelija(a))",
-                            ruoka, keskiarvot[paiva], maarat[paiva]
+                            "{} \n(**#{}**: :star:{}, {} arvostelija(a))",
+                            ruoka, positiot[paiva], keskiarvot[paiva], maarat[paiva]
                         ),
                         false,
                     );

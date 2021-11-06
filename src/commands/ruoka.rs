@@ -1,4 +1,3 @@
-use crate::arvio::Statistiikka;
 use crate::commands::update_ruokadb::update_ruokadb;
 use crate::database::*;
 use crate::util::dayconvert::*;
@@ -78,7 +77,10 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         Some(r) => r,
         _ => "".to_string(),
     };
-    let stats: Statistiikka = db
+    let maara;
+    let keskiarvo;
+    let positio;
+    if let Ok(stats) = db
         .anna_ruoan_statistiikka(
             ruoka.KokoRuoka[..match ruoka.KokoRuoka.find(',') {
                 Some(n) => n,
@@ -86,21 +88,29 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             }]
                 .to_string(),
         )
-        .await;
-    let keskiarvo = match stats.keskiarvo.as_ref() {
-        Some(s) => s.round(2).to_string(),
-        None => "N/A".to_string(),
-    };
+        .await
+    {
+        keskiarvo = match stats.keskiarvo.as_ref() {
+            Some(s) => s.round(2).to_string(),
+            None => "N/A".to_string(),
+        };
+        maara = stats.maara.to_string();
+        positio = stats.positio.to_string();
+    } else {
+        maara = "0".to_string();
+        keskiarvo = "N/A".to_string();
+        positio = "N/A".to_string();
+    }
     let message = msg
         .channel_id
         .send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.color(serenity::utils::Color::GOLD);
                 e.field(
-                    format!("{}: {}", viikonpaiva, date.format("%d/%m/%Y").to_string()),
+                    format!("{}: {}", viikonpaiva, date.format("%d/%m/%Y")),
                     format!(
-                        "{} \n(:star:{}, {} arvostelija(a))",
-                        ruoka.KokoRuoka, keskiarvo, stats.maara
+                        "{} \n(**#{}** :star:{}, {} arvostelija(a))",
+                        ruoka.KokoRuoka, positio, keskiarvo, maara
                     ),
                     false,
                 );
@@ -112,7 +122,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         message
             .react(
                 &ctx.http,
-                ReactionType::Unicode(format!("{}\u{fe0f}\u{20e3}", rating.to_string())),
+                ReactionType::Unicode(format!("{}\u{fe0f}\u{20e3}", rating)),
             )
             .await
             .unwrap();

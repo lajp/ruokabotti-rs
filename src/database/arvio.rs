@@ -4,6 +4,8 @@ use sqlx::types::BigDecimal;
 pub struct Statistiikka {
     pub keskiarvo: Option<BigDecimal>,
     pub maara: i64,
+    pub positio: u64,
+    pub id: i32,
 }
 pub struct KeskiarvoJaId {
     pub keskiarvo: Option<BigDecimal>,
@@ -62,11 +64,13 @@ impl Database {
             _ => Err(()),
         }
     }
-    pub async fn anna_ruoan_statistiikka(&self, ruoka: String) -> Statistiikka {
+    pub async fn anna_ruoan_statistiikka(
+        &self,
+        ruoka: String,
+    ) -> Result<Statistiikka, sqlx::Error> {
         let ruokaid = self.nouda_ruoka_by_name(ruoka).await.unwrap().RuokaID;
         let mut conn = self.pool.acquire().await.unwrap();
-        let stats = sqlx::query_as!(Statistiikka, "SELECT AVG(Arvosana) AS keskiarvo, COUNT(DISTINCT(KayttajaID)) AS maara FROM Arvostelut WHERE RuokaID = ?", ruokaid).fetch_one(&mut conn).await.unwrap();
-        stats
+        sqlx::query_as!(Statistiikka, "WITH Ranking AS (SELECT RuokaID as id, AVG(Arvosana) AS keskiarvo, COUNT(DISTINCT(KayttajaID)) AS maara, RANK() OVER (ORDER BY AVG(Arvosana) DESC) AS positio FROM Arvostelut GROUP BY RuokaID) SELECT * FROM Ranking WHERE id = ?;", ruokaid).fetch_one(&mut conn).await
     }
     pub async fn anna_kayttajan_statistiikka(&self, userid: u64) -> Option<KayttajaStatistiikka> {
         let mut conn = self.pool.acquire().await.unwrap();

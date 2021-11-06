@@ -45,19 +45,11 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, _args: Args) -> CommandRes
             m.embed(|e| {
                 e.color(serenity::utils::Color::BLUE);
                 e.title(format!("Käyttäjän {} ruokastatsit", user.name));
-                e.field("Arvostellut ruoat", stats.maara.to_string(), false);
-                e.field(
-                    "Keskimääräinen arvio",
-                    stats.keskiarvo.unwrap().to_string(),
-                    false,
-                );
+                e.field("Arvostellut ruoat", stats.maara, false);
+                e.field("Keskimääräinen arvio", stats.keskiarvo.unwrap(), false);
                 e.field(
                     "Lemppariruoka",
-                    format!(
-                        "{}(:star:{})",
-                        paras,
-                        stats.paras.arvio.unwrap().round(2).to_string()
-                    ),
+                    format!("{}(:star:{})", paras, stats.paras.arvio.unwrap().round(2)),
                     false,
                 );
                 e.field(
@@ -65,7 +57,7 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, _args: Args) -> CommandRes
                     format!(
                         "{}(:star:{})",
                         huonoin,
-                        stats.huonoin.arvio.unwrap().round(2).to_string()
+                        stats.huonoin.arvio.unwrap().round(2)
                     ),
                     false,
                 )
@@ -99,7 +91,7 @@ pub async fn parhaat(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
                         format!(
                             "{} (:star:{})",
                             ruokanimet[index],
-                            ruoka.keskiarvo.as_ref().unwrap().to_string()
+                            ruoka.keskiarvo.as_ref().unwrap()
                         ),
                         false,
                     );
@@ -137,7 +129,7 @@ pub async fn huonoimmat(ctx: &Context, msg: &Message, __args: Args) -> CommandRe
                         format!(
                             "{} (:star:{})",
                             ruokanimet[index],
-                            ruoka.keskiarvo.as_ref().unwrap().to_string()
+                            ruoka.keskiarvo.as_ref().unwrap()
                         ),
                         false,
                     );
