@@ -203,19 +203,15 @@ async fn main() {
     let adminfile = File::open("admins.txt").unwrap();
     let adminfilereader = BufReader::new(adminfile);
     for line in adminfilereader.lines() {
-        match line.unwrap().parse::<u64>() {
-            Ok(i) => admins.push(i),
-            _ => (),
-        };
+        if let Ok(i) = line.unwrap().parse::<u64>() { admins.push(i) };
     }
 
     let mut image_providers = Vec::new();
     let image_providersfile = File::open("image_providers.txt").unwrap();
     let image_provider_reader = BufReader::new(image_providersfile);
     for line in image_provider_reader.lines() {
-        match line.unwrap().parse::<u64>() {
-            Ok(i) => image_providers.push(i),
-            _ => (),
+        if let Ok(i) = line.unwrap().parse::<u64>() {
+            image_providers.push(i)
         };
     }
 

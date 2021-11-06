@@ -34,27 +34,24 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         .nouda_viikko(monday.to_string(), sunday.to_string())
         .await
         .unwrap();
-    match viikko.len() {
-        0 => {
-            update_ruokadb(ctx, None).await.ok();
-            viikko = db
-                .nouda_viikko(monday.to_string(), sunday.to_string())
-                .await
-                .unwrap();
-            if viikko.len() == 0 {
-                msg.channel_id.say(&ctx.http, format!("Ei ruokia viikolle `{}-{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
-                    monday.format("%d/%m"), sunday.format("%d/%m/%Y"))).await?;
-                return Ok(());
-            }
+    if viikko.is_empty() {
+        update_ruokadb(ctx, None).await.ok();
+        viikko = db
+            .nouda_viikko(monday.to_string(), sunday.to_string())
+            .await
+            .unwrap();
+        if viikko.is_empty() {
+            msg.channel_id.say(&ctx.http, format!("Ei ruokia viikolle `{}-{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
+                monday.format("%d/%m"), sunday.format("%d/%m/%Y"))).await?;
+            return Ok(());
         }
-        _ => viikko = viikko,
     };
     let mut keskiarvot = Vec::new();
     let mut maarat = Vec::new();
     for (_, ruoka) in viikko.iter().enumerate() {
         let stat: Statistiikka = db
             .anna_ruoan_statistiikka(
-                ruoka[..match ruoka.find(",") {
+                ruoka[..match ruoka.find(',') {
                     Some(n) => n,
                     None => ruoka.len(),
                 }]
