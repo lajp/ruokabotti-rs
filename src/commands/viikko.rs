@@ -110,3 +110,16 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         .await?;
     Ok(())
 }
+#[command]
+pub async fn ensviikko(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    let currentdate = chrono::offset::Local::today().naive_local();
+    let nextweek = currentdate + Duration::days(7);
+    viikko(
+        ctx,
+        msg,
+        Args::new(&nextweek.format("%d/%m/%Y").to_string(), &[]),
+    )
+    .await
+    .unwrap();
+    Ok(())
+}
