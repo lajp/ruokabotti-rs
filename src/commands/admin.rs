@@ -49,14 +49,18 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                 .unwrap()
                 .guild_id;
             let message = msg.content[msg.content.find(' ').unwrap() + 1..].to_string();
-            for channel in mainserver.channels(&ctx.http).await.unwrap().into_values() {
-                if channel.is_text_based() {
-                    channel
-                        .id
-                        .say(&ctx.http, format!("@everyone {}", message))
-                        .await
-                        .unwrap();
-                    break;
+            let mut defaultids: Vec<u64> = mainserver.channels(&ctx.http).await.unwrap().into_keys().map(|x| x.0).collect();
+            defaultids.sort_unstable();
+            // The channer with the lowest id-number is more often than not #general
+            for defid in defaultids {
+                if let Channel::Guild(gc) = ctx.http.get_channel(defid).await.unwrap() {
+                    match gc.id.say(&ctx.http, format!("@everyone {}", message)).await {
+                        Ok(_) => {
+                            info!("Broadcasting {} on the default server", message);
+                            break
+                        },
+                        _ => continue,
+                    }
                 }
             }
             for guild in ctx
@@ -65,15 +69,18 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                 .await
                 .unwrap()
             {
-                info!("Broadcasting {} on {}", message, guild.name);
-                for channel in guild.id.channels(&ctx.http).await.unwrap().into_values() {
-                    if channel.is_text_based() {
-                        channel
-                            .id
-                            .say(&ctx.http, format!("@everyone {}", message))
-                            .await
-                            .unwrap();
-                        break;
+                let mut idvec: Vec<u64> = guild.id.channels(&ctx.http).await.unwrap().into_keys().map(|x| x.0).collect();
+                idvec.sort_unstable();
+                // The channer with the lowest id-number is more often than not #general
+                for id in idvec {
+                    if let Channel::Guild(gc) = ctx.http.get_channel(id).await.unwrap() {
+                        match gc.id.say(&ctx.http, format!("@everyone {}", message)).await {
+                            Ok(_) => {
+                                info!("Broadcasting {} on {}", message, guild.name);
+                                break
+                            },
+                            _ => continue,
+                        }
                     }
                 }
             }
