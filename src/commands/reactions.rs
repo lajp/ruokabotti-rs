@@ -1,6 +1,6 @@
 use crate::database::*;
-use serenity::model::channel::Reaction;
 use serenity::builder::CreateEmbed;
+use serenity::model::channel::Reaction;
 use serenity::prelude::*;
 use tracing::info;
 
@@ -22,14 +22,14 @@ pub async fn food_reaction(ctx: &Context, reaction: &Reaction, add: bool) {
                 reaction.user_id.unwrap().0,
                 reaction.emoji.to_string()[..1].parse::<i32>().unwrap(),
                 ruoka.to_string(),
-                )
-                .await;
+            )
+            .await;
             info!(
                 "Reaction {} added by user `{}` to food: {}",
                 &reaction.emoji,
                 reaction.user_id.unwrap().0,
                 ruoka
-                );
+            );
         } else {
             db.poista_arvio(
                 reaction.user_id.unwrap().0,
@@ -42,7 +42,7 @@ pub async fn food_reaction(ctx: &Context, reaction: &Reaction, add: bool) {
                 &reaction.emoji,
                 reaction.user_id.unwrap().0,
                 ruoka
-                );
+            );
         }
         let maara;
         let keskiarvo;
@@ -67,9 +67,9 @@ pub async fn food_reaction(ctx: &Context, reaction: &Reaction, add: bool) {
             format!(
                 "(**#{}** :star:{}, {} arvostelija(a))",
                 positio, keskiarvo, maara
-                )
+            )
             .as_str()
-            );
+        );
         orig_embed.fields[0].value = foodstring;
         message
             .edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed)))

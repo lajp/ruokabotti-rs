@@ -4,7 +4,9 @@ mod util;
 
 use std::{collections::HashSet, env, fs::File, io::BufRead, io::BufReader, sync::Arc};
 
-use commands::{admin::*, image_provider_msg::*, kuva::*, ruoka::*, ruokastats::*, viikko::*, reactions::*};
+use commands::{
+    admin::*, image_provider_msg::*, kuva::*, reactions::*, ruoka::*, ruokastats::*, viikko::*,
+};
 use database::*;
 use serenity::{
     async_trait,
@@ -83,14 +85,22 @@ impl EventHandler for Handler {
     }
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
         let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
-        if reaction.message(&ctx.http).await.unwrap().author.id != bot_id.to_owned().0 { return; }
-        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 { return; }
+        if reaction.message(&ctx.http).await.unwrap().author.id != bot_id.to_owned().0 {
+            return;
+        }
+        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
+            return;
+        }
         food_reaction(&ctx, &reaction, true).await;
     }
     async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
         let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
-        if reaction.message(&ctx.http).await.unwrap().author.id != bot_id.to_owned().0 { return; }
-        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 { return; }
+        if reaction.message(&ctx.http).await.unwrap().author.id != bot_id.to_owned().0 {
+            return;
+        }
+        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
+            return;
+        }
         food_reaction(&ctx, &reaction, false).await;
     }
 }

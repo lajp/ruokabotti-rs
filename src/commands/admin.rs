@@ -49,7 +49,13 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                 .unwrap()
                 .guild_id;
             let message = msg.content[msg.content.find(' ').unwrap() + 1..].to_string();
-            let mut defaultids: Vec<u64> = mainserver.channels(&ctx.http).await.unwrap().into_keys().map(|x| x.0).collect();
+            let mut defaultids: Vec<u64> = mainserver
+                .channels(&ctx.http)
+                .await
+                .unwrap()
+                .into_keys()
+                .map(|x| x.0)
+                .collect();
             defaultids.sort_unstable();
             // The channer with the lowest id-number is more often than not #general
             for defid in defaultids {
@@ -57,8 +63,8 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                     match gc.id.say(&ctx.http, format!("@everyone {}", message)).await {
                         Ok(_) => {
                             info!("Broadcasting {} on the default server", message);
-                            break
-                        },
+                            break;
+                        }
                         _ => continue,
                     }
                 }
@@ -69,7 +75,14 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                 .await
                 .unwrap()
             {
-                let mut idvec: Vec<u64> = guild.id.channels(&ctx.http).await.unwrap().into_keys().map(|x| x.0).collect();
+                let mut idvec: Vec<u64> = guild
+                    .id
+                    .channels(&ctx.http)
+                    .await
+                    .unwrap()
+                    .into_keys()
+                    .map(|x| x.0)
+                    .collect();
                 idvec.sort_unstable();
                 // The channer with the lowest id-number is more often than not #general
                 for id in idvec {
@@ -77,8 +90,8 @@ pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> 
                         match gc.id.say(&ctx.http, format!("@everyone {}", message)).await {
                             Ok(_) => {
                                 info!("Broadcasting {} on {}", message, guild.name);
-                                break
-                            },
+                                break;
+                            }
                             _ => continue,
                         }
                     }
