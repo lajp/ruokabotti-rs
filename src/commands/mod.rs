@@ -5,3 +5,4 @@ pub mod ruoka;
 pub mod ruokastats;
 pub mod update_ruokadb;
 pub mod viikko;
+pub mod reactions;

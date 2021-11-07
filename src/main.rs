@@ -4,11 +4,10 @@ mod util;
 
 use std::{collections::HashSet, env, fs::File, io::BufRead, io::BufReader, sync::Arc};
 
-use commands::{admin::*, image_provider_msg::*, kuva::*, ruoka::*, ruokastats::*, viikko::*};
+use commands::{admin::*, image_provider_msg::*, kuva::*, ruoka::*, ruokastats::*, viikko::*, reactions::*};
 use database::*;
 use serenity::{
     async_trait,
-    builder::CreateEmbed,
     client::bridge::gateway::ShardManager,
     framework::{standard::macros::group, StandardFramework},
     http::Http,
@@ -84,125 +83,15 @@ impl EventHandler for Handler {
     }
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
         let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
-        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
-            return;
-        } else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
-            let message = &mut ctx
-                .http
-                .get_message(reaction.channel_id.0, reaction.message_id.0)
-                .await
-                .unwrap();
-            let kokoruoka = &message.embeds[0].fields[0].value;
-            let ruoka = &kokoruoka[..match kokoruoka.find(',') {
-                Some(n) => n,
-                None => kokoruoka.len(),
-            }];
-            info!(
-                "Reaction {} added by user `{}` to food: {}",
-                &reaction.emoji,
-                reaction.user_id.unwrap().0,
-                ruoka
-            );
-            let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-            db.lisaa_arvio(
-                reaction.user_id.unwrap().0,
-                reaction.emoji.to_string()[..1].parse::<i32>().unwrap(),
-                ruoka.to_string(),
-            )
-            .await;
-            let maara;
-            let keskiarvo;
-            let positio;
-            if let Ok(stats) = db.anna_ruoan_statistiikka(ruoka.to_string()).await {
-                keskiarvo = match stats.keskiarvo.as_ref() {
-                    Some(s) => s.round(2).to_string(),
-                    None => "N/A".to_string(),
-                };
-                maara = stats.maara.to_string();
-                positio = stats.positio.to_string();
-            } else {
-                maara = "0".to_string();
-                keskiarvo = "N/A".to_string();
-                positio = "N/A".to_string();
-            }
-            let mut orig_embed = message.embeds[0].clone();
-            let orig_foodstring = &orig_embed.fields[0].value;
-            let foodstring = format!(
-                "{}{}",
-                &orig_foodstring[..orig_foodstring.find('(').unwrap()],
-                format!(
-                    "(**#{}** :star:{}, {} arvostelija(a))",
-                    positio, keskiarvo, maara
-                )
-                .as_str()
-            );
-            orig_embed.fields[0].value = foodstring;
-            message
-                .edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed)))
-                .await
-                .unwrap();
-        }
+        if reaction.message(&ctx.http).await.unwrap().author.id != bot_id.to_owned().0 { return; }
+        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 { return; }
+        food_reaction(&ctx, &reaction, true).await;
     }
     async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
         let bot_id = &ctx.http.get_current_application_info().await.unwrap().id;
-        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 {
-            return;
-        } else if (1..6).contains(&reaction.emoji.to_string()[..1].parse::<i32>().unwrap()) {
-            let message = &mut ctx
-                .http
-                .get_message(reaction.channel_id.0, reaction.message_id.0)
-                .await
-                .unwrap();
-            let kokoruoka = &message.embeds[0].fields[0].value;
-            let ruoka = &kokoruoka[..match kokoruoka.find(',') {
-                Some(n) => n,
-                None => kokoruoka.len(),
-            }];
-            info!(
-                "Reaction {} removed by user `{}` from food: {}",
-                &reaction.emoji,
-                reaction.user_id.unwrap().0,
-                ruoka
-            );
-            let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-            db.poista_arvio(
-                reaction.user_id.unwrap().0,
-                reaction.emoji.to_string()[..1].parse::<i32>().unwrap(),
-                ruoka.to_string(),
-            )
-            .await;
-            let maara;
-            let keskiarvo;
-            let positio;
-            if let Ok(stats) = db.anna_ruoan_statistiikka(ruoka.to_string()).await {
-                keskiarvo = match stats.keskiarvo.as_ref() {
-                    Some(s) => s.round(2).to_string(),
-                    None => "N/A".to_string(),
-                };
-                maara = stats.maara.to_string();
-                positio = stats.positio.to_string();
-            } else {
-                maara = "0".to_string();
-                keskiarvo = "N/A".to_string();
-                positio = "N/A".to_string();
-            }
-            let mut orig_embed = message.embeds[0].clone();
-            let orig_foodstring = &orig_embed.fields[0].value;
-            let foodstring = format!(
-                "{}{}",
-                &orig_foodstring[..orig_foodstring.find('(').unwrap()],
-                format!(
-                    "(**#{}** :star:{}, {} arvostelija(a))",
-                    positio, keskiarvo, maara
-                )
-                .as_str()
-            );
-            orig_embed.fields[0].value = foodstring;
-            message
-                .edit(&ctx.http, |m| m.set_embed(CreateEmbed::from(orig_embed)))
-                .await
-                .unwrap();
-        }
+        if reaction.message(&ctx.http).await.unwrap().author.id != bot_id.to_owned().0 { return; }
+        if reaction.user_id.unwrap().0 == bot_id.to_owned().0 { return; }
+        food_reaction(&ctx, &reaction, false).await;
     }
 }
 
