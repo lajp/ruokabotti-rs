@@ -25,7 +25,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         Err(_) => {
             let mut duration = Duration::days(0);
             if chrono::offset::Local::now().naive_local().hour() >= 14 {
-                msg.channel_id.say(&ctx.http, "Tämän päivän ruokalujen ollessa jo ruokailtu, tulostetaan huomisen ruoka.").await?;
+                msg.channel_id.say(&ctx.http, "Tämän päivän ruokailujen ollessa jo ruokailtu, tulostetaan huomisen ruoka.").await?;
                 duration = Duration::days(1);
             }
             chrono::offset::Local::today().naive_local()+duration
