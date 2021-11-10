@@ -39,7 +39,16 @@ struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        let data = ctx.data.read().await;
+        let roles = data.get::<RoleIDs>().unwrap();
+        for admin in &roles.admin {
+            let adminuser = ctx.http.get_user(*admin).await.unwrap();
+            adminuser
+                .dm(&ctx.http, |m| m.content("Ruokabotti is up and running!"))
+                .await
+                .unwrap();
+        }
         info!("Connected as {}", ready.user.name);
     }
     async fn resume(&self, _: Context, _: ResumedEvent) {
