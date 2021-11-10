@@ -11,6 +11,7 @@ use tracing::error;
 use tracing::info;
 
 #[command]
+#[aliases(tääviikko)]
 pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let date = match args.single::<String>() {
         Ok(a) => {
