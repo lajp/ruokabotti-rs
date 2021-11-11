@@ -10,7 +10,8 @@ use std::convert::TryInto;
 use tracing::{error, info};
 
 #[command]
-pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+#[aliases(ruoka)]
+pub async fn food(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let mut date = match args.single::<String>() {
         Ok(a) => {
             match chrono::NaiveDate::parse_from_str(&a, "%d/%m/%Y") {
@@ -33,7 +34,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     };
 
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-    let ruoka = match db.nouda_ruoka_ja_id_by_date(date.to_string()).await? {
+    let food = match db.fetch_food_and_id_by_date(date.to_string()).await? {
         Some(r) => r,
         None => match date.weekday().num_days_from_monday() {
             d if d > 4 => {
@@ -41,12 +42,12 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
                 info!("No food was found for {} which is on a weekend. Checking the monday of the following week!", date.to_string());
                 let diff: i64 = d.try_into().unwrap();
                 date += Duration::days(7 - diff);
-                match db.nouda_ruoka_ja_id_by_date(date.to_string()).await? {
+                match db.fetch_food_and_id_by_date(date.to_string()).await? {
                     Some(r) => r,
                     None => {
                         update_ruokadb(ctx, None).await.ok();
                         match db
-                            .nouda_ruoka_ja_id_by_date(date.to_string())
+                            .fetch_food_and_id_by_date(date.to_string())
                             .await
                             .unwrap()
                         {
@@ -63,7 +64,7 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             _ => {
                 update_ruokadb(ctx, None).await.ok();
                 match db
-                    .nouda_ruoka_ja_id_by_date(date.to_string())
+                    .fetch_food_and_id_by_date(date.to_string())
                     .await
                     .unwrap()
                 {
@@ -78,35 +79,35 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             }
         },
     };
-    let viikonpaiva =
-        num_to_paiva(date.weekday().num_days_from_monday().try_into().unwrap()).unwrap();
-    let kuva: String = match db.ruokakuva_by_id(ruoka.RuokaID).await {
+    let weekday =
+        num_to_day(date.weekday().num_days_from_monday().try_into().unwrap()).unwrap();
+    let image: String = match db.fetch_image_by_id(food.id).await {
         Some(r) => r,
         _ => "".to_string(),
     };
-    let maara;
-    let keskiarvo;
-    let positio;
+    let rating_count;
+    let average;
+    let ranking;
     if let Ok(stats) = db
-        .anna_ruoan_statistiikka(
-            ruoka.KokoRuoka[..match ruoka.KokoRuoka.find(',') {
+        .fetch_food_stats(
+            food.name[..match food.name.find(',') {
                 Some(n) => n,
-                None => ruoka.KokoRuoka.len(),
+                None => food.name.len(),
             }]
                 .to_string(),
         )
         .await
     {
-        keskiarvo = match stats.keskiarvo.as_ref() {
+        average = match stats.average.as_ref() {
             Some(s) => s.round(2).to_string(),
             None => "N/A".to_string(),
         };
-        maara = stats.maara.to_string();
-        positio = stats.positio.to_string();
+        rating_count = stats.rating_count.to_string();
+        ranking = stats.ranking.to_string();
     } else {
-        maara = "0".to_string();
-        keskiarvo = "N/A".to_string();
-        positio = "N/A".to_string();
+        rating_count = "0".to_string();
+        average = "N/A".to_string();
+        ranking = "N/A".to_string();
     }
     let message = msg
         .channel_id
@@ -114,14 +115,14 @@ pub async fn ruoka(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             m.embed(|e| {
                 e.color(serenity::utils::Color::GOLD);
                 e.field(
-                    format!("{}: {}", viikonpaiva, date.format("%d/%m/%Y")),
+                    format!("{}: {}", weekday, date.format("%d/%m/%Y")),
                     format!(
                         "{} \n(**#{}** :star:{}, {} arvostelija(a))",
-                        ruoka.KokoRuoka, positio, keskiarvo, maara
+                        food.name, ranking, average, rating_count
                     ),
                     false,
                 );
-                e.image(format!("http://ruoka.lajp.fi/{}", kuva))
+                e.image(format!("http://ruoka.lajp.fi/{}", image))
             })
         })
         .await?;

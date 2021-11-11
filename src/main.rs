@@ -5,7 +5,7 @@ mod util;
 use std::{collections::HashSet, env, fs::File, io::BufRead, io::BufReader, sync::Arc};
 
 use commands::{
-    admin::*, image_provider_msg::*, kuva::*, reactions::*, ruoka::*, ruokastats::*, viikko::*,
+    admin::*, image_provider_msg::*, image::*, reactions::*, food::*, foodstats::*, week::*,
 };
 use database::*;
 use serenity::{
@@ -115,7 +115,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(ruoka, viikko, kuva, ruokastats, parhaat, huonoimmat, ensviikko)]
+#[commands(food, week, image, foodstats, best, worst, nextweek)]
 struct General;
 
 #[tokio::main]

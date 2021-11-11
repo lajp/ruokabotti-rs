@@ -24,8 +24,8 @@ pub async fn handle_image_provider_message(ctx: Context, msg: Message) -> Result
             .unwrap();
         } else {
             let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-            let ruoka = match db
-                .nouda_ruoka_by_name_case_insensitive(msg.content.clone())
+            let food = match db
+                .fetch_food_by_name_case_insensitive(msg.content.clone())
                 .await
             {
                 Ok(r) => r,
@@ -46,14 +46,14 @@ pub async fn handle_image_provider_message(ctx: Context, msg: Message) -> Result
 
             let mut content = r_res.as_ref();
 
-            let kuvapath = "ruoat/";
+            let imagepath = "ruoat/";
 
-            tokio::fs::create_dir_all(&kuvapath).await.unwrap();
+            tokio::fs::create_dir_all(&imagepath).await.unwrap();
 
             let (_, ext) = &msg.attachments[0]
                 .filename
                 .split_at(msg.attachments[0].filename.rfind(".").unwrap());
-            let filepath = format!("{}{}{}", kuvapath, msg.content, ext);
+            let filepath = format!("{}{}{}", imagepath, msg.content, ext);
             let filename = format!("{}{}", msg.content, ext);
             let mut f = File::create(&filepath).await.unwrap();
             io::copy(&mut content, &mut f).await.unwrap();
@@ -61,7 +61,7 @@ pub async fn handle_image_provider_message(ctx: Context, msg: Message) -> Result
                 "Wrote {} bytes into the file `{}`",
                 msg.attachments[0].size, filename
             );
-            db.lisaa_kuva_ruokaan(ruoka.RuokaID, filename.replace(" ", "%20"))
+            db.add_image_to_food(food.id, filename.replace(" ", "%20"))
                 .await
                 .unwrap();
             msg.reply(

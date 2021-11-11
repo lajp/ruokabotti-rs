@@ -2,60 +2,60 @@
 use super::Database;
 use tracing::info;
 
-pub struct Ruoka {
-    ImageName: Option<String>,
+pub struct Food {
+    image_name: Option<String>,
 }
 
 impl Database {
-    pub async fn ruokakuva_by_name(&self, nimi: String) -> Option<String> {
+    pub async fn fetch_image_by_name(&self, name: String) -> Option<String> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let mut ruokakuva =
-            match sqlx::query!("SELECT ImageName FROM Ruoat WHERE RuokaName = ?", nimi)
+        let mut foodimage =
+            match sqlx::query!("SELECT ImageName as image_name FROM Ruoat WHERE RuokaName = ?", name)
                 .fetch_one(&mut conn)
                 .await
             {
-                Ok(r) => r.ImageName,
+                Ok(r) => r.image_name,
                 Err(e) => {
-                    info!("Error while querying for food image `{}`: {}", nimi, e);
+                    info!("Error while querying for food image `{}`: {}", name, e);
                     None
                 }
             };
 
-        ruokakuva = match ruokakuva {
+        foodimage = match foodimage {
             Some(s) => Some(s),
             None => {
-                info!("{} has non image in the database", nimi);
+                info!("{} has non image in the database", name);
                 None
             }
         };
-        ruokakuva
+        foodimage
     }
-    pub async fn ruokakuva_by_id(&self, id: i32) -> Option<String> {
+    pub async fn fetch_image_by_id(&self, id: i32) -> Option<String> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let mut ruokakuva = match sqlx::query!("SELECT ImageName FROM Ruoat WHERE RuokaID = ?", id)
+        let mut foodimage = match sqlx::query!("SELECT ImageName as image_name FROM Ruoat WHERE RuokaID = ?", id)
             .fetch_one(&mut conn)
             .await
         {
-            Ok(r) => r.ImageName,
+            Ok(r) => r.image_name,
             Err(e) => {
                 info!("Error while querying for food image ID:`{}`: {}", id, e);
                 None
             }
         };
 
-        ruokakuva = match ruokakuva {
+        foodimage = match foodimage {
             Some(s) => Some(s),
             None => {
                 info!("ID:{} has non image in the database", id);
                 None
             }
         };
-        ruokakuva
+        foodimage
     }
-    pub async fn ruokakuvat_by_query(&self, query: String) -> Option<Vec<String>> {
+    pub async fn fetch_images_by_query(&self, query: String) -> Option<Vec<String>> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let ruokakuvat = match sqlx::query!(
-            "SELECT ImageName FROM Ruoat WHERE LOWER(ImageName) LIKE LOWER( ? )",
+        let foodimages = match sqlx::query!(
+            "SELECT ImageName as image_name FROM Ruoat WHERE LOWER(ImageName) LIKE LOWER( ? )",
             format!("%{}%", query)
         )
         .fetch_all(&mut conn)
@@ -68,9 +68,9 @@ impl Database {
             }
         };
         Some(
-            ruokakuvat
+            foodimages
                 .iter()
-                .map(|r| r.ImageName.as_ref().unwrap().clone())
+                .map(|r| r.image_name.as_ref().unwrap().clone())
                 .collect(),
         )
     }

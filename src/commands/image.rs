@@ -6,12 +6,13 @@ use std::boxed::Box;
 use tracing::error;
 
 #[command]
-pub async fn kuva(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+#[aliases(kuva)]
+pub async fn image(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     match args.single::<String>() {
         Ok(_) => {
             let query: String = args.raw().collect::<Vec<&str>>().join(" ");
             let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-            match db.ruokakuvat_by_query(query.clone()).await {
+            match db.fetch_images_by_query(query.clone()).await {
                 Some(names) => {
                     msg.channel_id
                         .say(

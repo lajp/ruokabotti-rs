@@ -1,4 +1,4 @@
-pub fn num_to_paiva(num: usize) -> Option<String> {
+pub fn num_to_day(num: usize) -> Option<String> {
     match num {
         0 => Some("Maanantai".to_string()),
         1 => Some("Tiistai".to_string()),

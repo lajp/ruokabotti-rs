@@ -5,7 +5,8 @@ use serenity::prelude::*;
 use std::convert::TryInto;
 
 #[command]
-pub async fn ruokastats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+#[aliases(ruokastats)]
+pub async fn foodstats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let userid;
     if !msg.mentions.is_empty() {
         userid = msg.mentions[0].id.0;
@@ -14,7 +15,7 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, _args: Args) -> CommandRes
     }
     let user = &mut ctx.http.get_user(userid).await.unwrap();
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-    let stats = match db.anna_kayttajan_statistiikka(userid).await {
+    let stats = match db.fetch_user_stats(userid).await {
         Some(s) => s,
         None => {
             msg.channel_id
@@ -31,25 +32,25 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, _args: Args) -> CommandRes
         }
     };
     let paras = db
-        .nouda_ruoka_by_id(stats.paras.id.try_into().unwrap())
+        .fetch_food_by_id(stats.best.id.try_into().unwrap())
         .await
         .unwrap()
-        .RuokaName;
+        .name;
     let huonoin = db
-        .nouda_ruoka_by_id(stats.huonoin.id.try_into().unwrap())
+        .fetch_food_by_id(stats.worst.id.try_into().unwrap())
         .await
         .unwrap()
-        .RuokaName;
+        .name;
     msg.channel_id
         .send_message(&ctx.http, |m| {
             m.embed(|e| {
                 e.color(serenity::utils::Color::BLUE);
                 e.title(format!("Käyttäjän {} ruokastatsit", user.name));
-                e.field("Arvostellut ruoat", stats.maara, false);
-                e.field("Keskimääräinen arvio", stats.keskiarvo.unwrap(), false);
+                e.field("Arvostellut ruoat", stats.rating_count, false);
+                e.field("Keskimääräinen arvio", stats.average.unwrap(), false);
                 e.field(
                     "Lemppariruoka",
-                    format!("{}(:star:{})", paras, stats.paras.arvio.unwrap().round(2)),
+                    format!("{}(:star:{})", paras, stats.best.rating.unwrap().round(2)),
                     false,
                 );
                 e.field(
@@ -57,7 +58,7 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, _args: Args) -> CommandRes
                     format!(
                         "{}(:star:{})",
                         huonoin,
-                        stats.huonoin.arvio.unwrap().round(2)
+                        stats.worst.rating.unwrap().round(2)
                     ),
                     false,
                 )
@@ -68,16 +69,17 @@ pub async fn ruokastats(ctx: &Context, msg: &Message, _args: Args) -> CommandRes
 }
 
 #[command]
-pub async fn parhaat(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+#[aliases(parhaat)]
+pub async fn best(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-    let topfive = db.anna_parhaat_ruoat(Some(5)).await;
-    let mut ruokanimet = Vec::new();
-    for ruoka in &topfive {
-        ruokanimet.push(
-            db.nouda_ruoka_by_id(ruoka.id.try_into().unwrap())
+    let topfive = db.fetch_best_foods(Some(5)).await;
+    let mut foodnames = Vec::new();
+    for food in &topfive {
+        foodnames.push(
+            db.fetch_food_by_id(food.id.try_into().unwrap())
                 .await
                 .unwrap()
-                .RuokaName,
+                .name,
         );
     }
     msg.channel_id
@@ -85,13 +87,13 @@ pub async fn parhaat(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
             m.embed(|e| {
                 e.color(serenity::utils::Color::GOLD);
                 e.title("Top 5 ruoat");
-                for (index, ruoka) in topfive.iter().enumerate() {
+                for (index, food) in topfive.iter().enumerate() {
                     e.field(
                         format!("#{}", index + 1),
                         format!(
                             "{} (:star:{})",
-                            ruokanimet[index],
-                            ruoka.keskiarvo.as_ref().unwrap()
+                            foodnames[index],
+                            food.average.as_ref().unwrap()
                         ),
                         false,
                     );
@@ -105,17 +107,17 @@ pub async fn parhaat(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
 }
 
 #[command]
-#[aliases(subipäivät)]
-pub async fn huonoimmat(ctx: &Context, msg: &Message, __args: Args) -> CommandResult {
+#[aliases(huonoimmat, subipäivät)]
+pub async fn worst(ctx: &Context, msg: &Message, __args: Args) -> CommandResult {
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-    let botfive = db.anna_huonoimmat_ruoat(Some(5)).await;
-    let mut ruokanimet = Vec::new();
-    for ruoka in &botfive {
-        ruokanimet.push(
-            db.nouda_ruoka_by_id(ruoka.id.try_into().unwrap())
+    let botfive = db.fetch_worst_foods(Some(5)).await;
+    let mut foodnames = Vec::new();
+    for food in &botfive {
+        foodnames.push(
+            db.fetch_food_by_id(food.id.try_into().unwrap())
                 .await
                 .unwrap()
-                .RuokaName,
+                .name,
         );
     }
     msg.channel_id
@@ -123,13 +125,13 @@ pub async fn huonoimmat(ctx: &Context, msg: &Message, __args: Args) -> CommandRe
             m.embed(|e| {
                 e.color(serenity::utils::Color::DARK_RED);
                 e.title("Top 5 paskimmat ruoat");
-                for (index, ruoka) in botfive.iter().enumerate() {
+                for (index, food) in botfive.iter().enumerate() {
                     e.field(
                         format!("#{}", index + 1),
                         format!(
                             "{} (:star:{})",
-                            ruokanimet[index],
-                            ruoka.keskiarvo.as_ref().unwrap()
+                            foodnames[index],
+                            food.average.as_ref().unwrap()
                         ),
                         false,
                     );

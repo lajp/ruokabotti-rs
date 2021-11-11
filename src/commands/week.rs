@@ -1,4 +1,4 @@
-use crate::arvio::Statistiikka;
+use crate::rating::FoodStatistics;
 use crate::commands::update_ruokadb::update_ruokadb;
 use crate::database::*;
 use crate::util::dayconvert::*;
@@ -11,8 +11,8 @@ use tracing::error;
 use tracing::info;
 
 #[command]
-#[aliases(tääviikko)]
-pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+#[aliases(viikko, tääviikko)]
+pub async fn week(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let date = match args.single::<String>() {
         Ok(a) => {
             match chrono::NaiveDate::parse_from_str(&a, "%d/%m/%Y") {
@@ -31,31 +31,31 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     let monday = date + Duration::days(-difftomon);
     let sunday = date + Duration::days(6 - difftomon);
     let db = ctx.data.read().await.get::<Database>().unwrap().clone();
-    let mut viikko = db
-        .nouda_viikko(monday.to_string(), sunday.to_string())
+    let mut week = db
+        .fetch_week(monday.to_string(), sunday.to_string())
         .await
         .unwrap();
-    if viikko.is_empty() {
+    if week.is_empty() {
         update_ruokadb(ctx, None).await.ok();
-        viikko = db
-            .nouda_viikko(monday.to_string(), sunday.to_string())
+        week = db
+            .fetch_week(monday.to_string(), sunday.to_string())
             .await
             .unwrap();
-        if viikko.is_empty() {
+        if week.is_empty() {
             msg.channel_id.say(&ctx.http, format!("Ei ruokia viikolle `{}-{}`! Jos tämä on mielestäsi bugi, ota yhteyttä ruokabotin kehittäjiin!",
                 monday.format("%d/%m"), sunday.format("%d/%m/%Y"))).await?;
             return Ok(());
         }
     };
-    let mut keskiarvot = Vec::new();
-    let mut maarat = Vec::new();
-    let mut positiot = Vec::new();
-    for (_, ruoka) in viikko.iter().enumerate() {
-        let stat: Statistiikka = match db
-            .anna_ruoan_statistiikka(
-                ruoka[..match ruoka.find(',') {
+    let mut averages = Vec::new();
+    let mut rating_counts = Vec::new();
+    let mut rankings = Vec::new();
+    for (_, food) in week.iter().enumerate() {
+        let stat: FoodStatistics = match db
+            .fetch_food_stats(
+                food[..match food.find(',') {
                     Some(n) => n,
-                    None => ruoka.len(),
+                    None => food.len(),
                 }]
                     .to_string(),
             )
@@ -63,19 +63,19 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         {
             Ok(s) => s,
             Err(_) => {
-                keskiarvot.push("N/A".to_string());
-                maarat.push("0".to_string());
-                positiot.push("N/A".to_string());
+                averages.push("N/A".to_string());
+                rating_counts.push("0".to_string());
+                rankings.push("N/A".to_string());
                 continue;
             }
         };
-        let keskiarvo = match stat.keskiarvo.as_ref() {
+        let average = match stat.average.as_ref() {
             Some(s) => s.round(2).to_string(),
             None => "N/A".to_string(),
         };
-        keskiarvot.push(keskiarvo);
-        maarat.push(stat.maara.to_string());
-        positiot.push(stat.positio.to_string());
+        averages.push(average);
+        rating_counts.push(stat.rating_count.to_string());
+        rankings.push(stat.ranking.to_string());
     }
     info!(
         "Sending week `{}-{}`",
@@ -91,16 +91,16 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
                     sunday.format("-%d/%m/%Y")
                 ));
                 e.color(serenity::utils::Color::PURPLE);
-                for (paiva, ruoka) in viikko.iter().enumerate() {
+                for (day, food) in week.iter().enumerate() {
                     e.field(
                         format!(
                             "{}: {}",
-                            num_to_paiva(paiva).unwrap(),
-                            (monday + Duration::days(paiva.try_into().unwrap())).format("%d/%m/%Y")
+                            num_to_day(day).unwrap(),
+                            (monday + Duration::days(day.try_into().unwrap())).format("%d/%m/%Y")
                         ),
                         format!(
                             "{} \n(**#{}**: :star:{}, {} arvostelija(a))",
-                            ruoka, positiot[paiva], keskiarvot[paiva], maarat[paiva]
+                            food, rankings[day], averages[day], rating_counts[day]
                         ),
                         false,
                     );
@@ -112,13 +112,14 @@ pub async fn viikko(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     Ok(())
 }
 #[command]
-pub async fn ensviikko(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+#[aliases(ensviikko)]
+pub async fn nextweek(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let currentdate = chrono::offset::Local::today().naive_local();
-    let nextweek = currentdate + Duration::days(7);
-    viikko(
+    let next_week = currentdate + Duration::days(7);
+    week(
         ctx,
         msg,
-        Args::new(&nextweek.format("%d/%m/%Y").to_string(), &[]),
+        Args::new(&next_week.format("%d/%m/%Y").to_string(), &[]),
     )
     .await
     .unwrap();

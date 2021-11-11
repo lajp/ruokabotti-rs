@@ -30,7 +30,7 @@ pub async fn parse_lykeion(link: Option<String>) -> Result<Vec<(NaiveDate, Strin
         url = link.unwrap();
         info!("Was provided with the following link: {}", &url);
     }
-    let ruokalista = r_client
+    let foodlist = r_client
         .get(url)
         .send()
         .await
@@ -39,7 +39,7 @@ pub async fn parse_lykeion(link: Option<String>) -> Result<Vec<(NaiveDate, Strin
         .await
         .unwrap();
 
-    let document = Document::load_mem(&ruokalista).unwrap();
+    let document = Document::load_mem(&foodlist).unwrap();
     let mut content = document.extract_text(&[1]).unwrap();
     content.retain(|c| c != '\n');
     let mut listavec = Vec::new();
