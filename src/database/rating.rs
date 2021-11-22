@@ -64,10 +64,7 @@ impl Database {
             _ => Err(()),
         }
     }
-    pub async fn fetch_food_stats(
-        &self,
-        food: String,
-    ) -> Result<FoodStatistics, sqlx::Error> {
+    pub async fn fetch_food_stats(&self, food: String) -> Result<FoodStatistics, sqlx::Error> {
         let foodid = self.fetch_food_by_name(food).await.unwrap().id;
         let mut conn = self.pool.acquire().await.unwrap();
         sqlx::query_as!(FoodStatistics, "WITH Ranking AS (SELECT RuokaID as id, AVG(Arvosana) AS average, COUNT(DISTINCT(KayttajaID)) AS rating_count, RANK() OVER (ORDER BY AVG(Arvosana) DESC) AS ranking FROM Arvostelut GROUP BY RuokaID) SELECT * FROM Ranking WHERE id = ?;", foodid).fetch_one(&mut conn).await

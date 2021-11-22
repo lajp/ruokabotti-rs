@@ -79,8 +79,7 @@ pub async fn food(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             }
         },
     };
-    let weekday =
-        num_to_day(date.weekday().num_days_from_monday().try_into().unwrap()).unwrap();
+    let weekday = num_to_day(date.weekday().num_days_from_monday().try_into().unwrap()).unwrap();
     let image: String = match db.fetch_image_by_id(food.id).await {
         Some(r) => r,
         _ => "".to_string(),

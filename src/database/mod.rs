@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use serenity::prelude::TypeMapKey;
 use sqlx::MySqlPool;
-pub mod rating;
 pub mod add_food;
 pub mod fetch_food;
 pub mod foodimage;
+pub mod rating;
 
 pub struct Database {
     pool: MySqlPool,

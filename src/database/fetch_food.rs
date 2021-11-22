@@ -49,9 +49,12 @@ impl Database {
     }
     pub async fn fetch_food_by_date(&self, date: String) -> Result<Option<String>, sqlx::Error> {
         let mut conn = self.pool.acquire().await.unwrap();
-        match sqlx::query!("SELECT KokoRuoka as whole_food FROM Ruokalista WHERE PVM = ?", date)
-            .fetch_one(&mut conn)
-            .await
+        match sqlx::query!(
+            "SELECT KokoRuoka as whole_food FROM Ruokalista WHERE PVM = ?",
+            date
+        )
+        .fetch_one(&mut conn)
+        .await
         {
             Ok(r) => Ok(Some(r.whole_food)),
             Err(_) => Ok(None),

@@ -28,7 +28,7 @@ features = ["runtime-tokio-rustls", "mysql", "bigdecimal"]
 regex = {version = "*", features = ["default"]}
 dotenv = "*"
 tracing = "*"
-tracing-subscriber = "*"
+tracing-subscriber = { version = "*", features = ["env-filter"] }
 futures = "*"
 chrono = "*"
 lopdf = "*"

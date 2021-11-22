@@ -3,9 +3,10 @@ mod database;
 mod util;
 
 use std::{collections::HashSet, env, fs::File, io::BufRead, io::BufReader, sync::Arc};
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use commands::{
-    admin::*, image_provider_msg::*, image::*, reactions::*, food::*, foodstats::*, week::*,
+    admin::*, food::*, foodstats::*, image::*, image_provider_msg::*, reactions::*, week::*,
 };
 use database::*;
 use serenity::{
@@ -128,7 +129,9 @@ async fn main() {
     //
     // In this case, a good default is setting the environment variable
     // `RUST_LOG` to `debug`.
-    tracing_subscriber::fmt::init();
+    FmtSubscriber::builder()
+        .with_env_filter(EnvFilter::new("info,sqlx::query=error"))
+        .init();
 
     let database = Database::new().await;
 

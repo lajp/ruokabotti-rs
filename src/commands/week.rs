@@ -1,6 +1,6 @@
-use crate::rating::FoodStatistics;
 use crate::commands::update_ruokadb::update_ruokadb;
 use crate::database::*;
+use crate::rating::FoodStatistics;
 use crate::util::dayconvert::*;
 use chrono::{Datelike, Duration};
 use serenity::framework::standard::{macros::command, Args, CommandResult};

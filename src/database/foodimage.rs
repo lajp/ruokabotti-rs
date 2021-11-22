@@ -9,17 +9,19 @@ pub struct Food {
 impl Database {
     pub async fn fetch_image_by_name(&self, name: String) -> Option<String> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let mut foodimage =
-            match sqlx::query!("SELECT ImageName as image_name FROM Ruoat WHERE RuokaName = ?", name)
-                .fetch_one(&mut conn)
-                .await
-            {
-                Ok(r) => r.image_name,
-                Err(e) => {
-                    info!("Error while querying for food image `{}`: {}", name, e);
-                    None
-                }
-            };
+        let mut foodimage = match sqlx::query!(
+            "SELECT ImageName as image_name FROM Ruoat WHERE RuokaName = ?",
+            name
+        )
+        .fetch_one(&mut conn)
+        .await
+        {
+            Ok(r) => r.image_name,
+            Err(e) => {
+                info!("Error while querying for food image `{}`: {}", name, e);
+                None
+            }
+        };
 
         foodimage = match foodimage {
             Some(s) => Some(s),
@@ -32,9 +34,12 @@ impl Database {
     }
     pub async fn fetch_image_by_id(&self, id: i32) -> Option<String> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let mut foodimage = match sqlx::query!("SELECT ImageName as image_name FROM Ruoat WHERE RuokaID = ?", id)
-            .fetch_one(&mut conn)
-            .await
+        let mut foodimage = match sqlx::query!(
+            "SELECT ImageName as image_name FROM Ruoat WHERE RuokaID = ?",
+            id
+        )
+        .fetch_one(&mut conn)
+        .await
         {
             Ok(r) => r.image_name,
             Err(e) => {

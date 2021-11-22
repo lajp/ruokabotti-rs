@@ -10,9 +10,13 @@ impl Database {
         image: String,
     ) -> Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> {
         let mut conn = self.pool.acquire().await.unwrap();
-        sqlx::query!("UPDATE Ruoat SET ImageName = ? WHERE RuokaID = ?", image, id)
-            .execute(&mut conn)
-            .await
+        sqlx::query!(
+            "UPDATE Ruoat SET ImageName = ? WHERE RuokaID = ?",
+            image,
+            id
+        )
+        .execute(&mut conn)
+        .await
     }
     pub async fn add_new_food(&self, name: String) -> Result<i32, sqlx::Error> {
         let mut conn = self.pool.acquire().await.unwrap();
