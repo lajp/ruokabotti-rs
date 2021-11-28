@@ -24,7 +24,14 @@ pub async fn week(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
                 }
             }
         }
-        Err(_) => chrono::offset::Local::today().naive_local(),
+        Err(_) => {
+            let mut day = chrono::offset::Local::today().naive_local();
+            if day.weekday().num_days_from_monday() > 5 {
+                msg.channel_id.say(&ctx.http, "Tämän viikon ruokailujen ollessa jo ruokailtu, tulostetaan ensi viikon ruoka.").await?;
+                day += Duration::days(3);
+            }
+            day
+        },
     };
     let weekday = date.weekday();
     let difftomon: i64 = weekday.num_days_from_monday().into();
