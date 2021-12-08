@@ -32,7 +32,7 @@ impl Database {
         let mut conn = self.pool.acquire().await.unwrap();
         for item in list {
             info!("Item: {:?}", item);
-            let foodname = &item.1[..item.1.find(",").unwrap()].to_string();
+            let foodname = &item.1[..item.1.find(",").unwrap_or(item.1.len())].to_string();
             let foodid = match self.fetch_food_by_name(foodname.to_string()).await {
                 Ok(r) => r.id,
                 Err(_) => self.add_new_food(foodname.to_string()).await.unwrap(),
