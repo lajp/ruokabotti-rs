@@ -31,7 +31,7 @@ pub async fn parse_lykeion() -> Result<Vec<(NaiveDate, String)>, anyhow::Error> 
             let caps = caps.replace(" ,", ",");
             let caps = caps.replace(",,", ",");
             let caps = caps.replace("  ", " ");
-            retvec.push((date, caps.trim_end_matches(&[',', ' ', 'M']).to_string()))
+            retvec.push((date, caps.trim_end_matches(|c| c == ',' || c == ' ' || c == 'M').to_string()))
         }
     }
     Ok(retvec)
