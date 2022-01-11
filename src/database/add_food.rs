@@ -45,7 +45,7 @@ impl Database {
             )
             .execute(&mut conn)
             .await
-            .unwrap();
+            .ok();
         }
         Ok(())
     }
