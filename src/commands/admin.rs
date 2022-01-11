@@ -10,11 +10,7 @@ use tracing::info;
 
 pub async fn handle_admin_message(ctx: Context, msg: Message) -> Result<(), ()> {
     if msg.content.starts_with("!update") {
-        let link = match msg.content.len() {
-            7 => None,
-            _ => Some(msg.content[msg.content.find(' ').unwrap() + 1..].to_owned()),
-        };
-        match update_ruokadb(&ctx, link).await {
+        match update_ruokadb(&ctx).await {
             Ok(_) => {
                 msg.channel_id
                     .say(&ctx.http, "Ruokalista päivitetty!")

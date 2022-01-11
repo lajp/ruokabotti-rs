@@ -30,7 +30,6 @@ impl Database {
     }
     pub async fn add_foods_to_list(&self, list: Vec<(NaiveDate, String)>) -> Result<(), ()> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let mut errcount = 0;
         for item in list {
             info!("Item: {:?}", item);
             let foodname = &item.1[..item.1.find(",").unwrap_or(item.1.len())].to_string();
@@ -38,23 +37,15 @@ impl Database {
                 Ok(r) => r.id,
                 Err(_) => self.add_new_food(foodname.to_string()).await.unwrap(),
             };
-            let res = sqlx::query!(
+            sqlx::query!(
                 "INSERT INTO Ruokalista (PVM, RuokaID, KokoRuoka) VALUES( ? , ? , ?)",
                 &item.0.to_string(),
                 &foodid,
                 &item.1
             )
             .execute(&mut conn)
-            .await;
-            match res {
-                Ok(_) => continue,
-                Err(_) => {
-                    if errcount == 5 {
-                        return Err(());
-                    }
-                    errcount += 1;
-                }
-            }
+            .await
+            .unwrap();
         }
         Ok(())
     }

@@ -43,7 +43,8 @@ pub async fn week(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         .await
         .unwrap();
     if week.is_empty() {
-        update_ruokadb(ctx, None).await.ok();
+        msg.channel_id.send_message(&ctx.http, |m| m.content("Päivitetään ruokalistaa..")).await.unwrap();
+        update_ruokadb(ctx).await.ok();
         week = db
             .fetch_week(monday.to_string(), sunday.to_string())
             .await

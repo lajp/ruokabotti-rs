@@ -1,101 +1,38 @@
-use chrono::{Duration, NaiveDate};
-use lopdf::Document;
+use chrono::NaiveDate;
 use regex::Regex;
-use tracing::info;
+use rss::Channel;
 
-pub async fn parse_lykeion(link: Option<String>) -> Result<Vec<(NaiveDate, String)>, ()> {
+lazy_static::lazy_static! {
+    static ref FOOD_REGEX: Regex = Regex::new(r"Lounas\s:\s([\W\w]+)?<br>").unwrap();
+    static ref ALLERGEENI_REGEX: Regex = Regex::new(r"\s\(.*?\)").unwrap();
+}
+
+pub async fn parse_lykeion() -> Result<Vec<(NaiveDate, String)>, anyhow::Error> {
     let r_client = reqwest::Client::builder().build().unwrap();
-    let url;
-    let body;
-    if link == None {
-        body = r_client
-            .get("https://www.teese.fi/ruokalistat-2/")
+    let mut retvec = Vec::new();
+    for i in 1..=7 {
+        let resp = r_client
+            .get(format!("https://aromimenu.cgisaas.fi/VaasaAromieMenus/fi-FI/Default/_/CampusLykeion/Rss.aspx?Id=0c9160c7-bedb-4b60-9ee1-188bf43a02b3&DateMode={}", i))
             .send()
-            .await
-            .unwrap()
-            .text()
-            .await
-            .unwrap();
-
-        url = Regex::new(r"https://.*lukio.*\.pdf")
-            .unwrap()
-            .find_iter(&body)
-            .into_iter()
-            .last()
-            .unwrap()
-            .as_str()
-            .to_string();
-        info!("Found the link to the latest pdf: {}", &url);
-    } else {
-        url = link.unwrap();
-        info!("Was provided with the following link: {}", &url);
-    }
-    let foodlist = r_client
-        .get(url)
-        .send()
-        .await
-        .unwrap()
-        .bytes()
-        .await
-        .unwrap();
-
-    let document = Document::load_mem(&foodlist).unwrap();
-    let mut content = document.extract_text(&[1]).unwrap();
-    content.retain(|c| c != '\n');
-    let mut listavec = Vec::new();
-    while content.contains("VIIKKO") {
-        let firstindex = content.find("VIIKKO").unwrap();
-        let secondindex = match content[firstindex + 1..].find("VIIKKO") {
-            Some(i) => i,
-            None => content.len() - 1 - firstindex,
-        };
-        let week = &content[firstindex..secondindex + firstindex + 1];
-        let week = &week.split_whitespace().collect::<Vec<&str>>().join(" "); // trim excess whitespace
-        let pvm_str = week.split(' ').collect::<Vec<&str>>()[2];
-        let sunpvm =
-            NaiveDate::parse_from_str(pvm_str.split('-').collect::<Vec<&str>>()[1], "%d.%m.%Y")
-                .unwrap();
-        let mut pvm = chrono::offset::Local::today().naive_local();
-        let mut foodvec = Vec::new();
-        for item in week.split(' ').collect::<Vec<&str>>() {
-            match item {
-                "Maanantai" => {
-                    pvm = sunpvm - Duration::days(6);
-                    foodvec.clear();
-                }
-                "Tiistai" => {
-                    listavec.push((pvm, foodvec.join(" ")));
-                    foodvec.clear();
-                    pvm = sunpvm - Duration::days(5);
-                }
-                "Keskiviikko" => {
-                    listavec.push((pvm, foodvec.join(" ")));
-                    foodvec.clear();
-                    pvm = sunpvm - Duration::days(4);
-                }
-                "Torstai" => {
-                    listavec.push((pvm, foodvec.join(" ")));
-                    foodvec.clear();
-                    pvm = sunpvm - Duration::days(3);
-                }
-                "Perjantai" => {
-                    listavec.push((pvm, foodvec.join(" ")));
-                    foodvec.clear();
-                    pvm = sunpvm - Duration::days(2);
-                }
-                "Lauantai" => {
-                    listavec.push((pvm, foodvec.join(" ")));
-                    foodvec.clear();
-                    pvm = sunpvm - Duration::days(1);
-                }
-                _ => {
-                    foodvec.push(item);
-                }
-            }
+            .await?
+            .bytes()
+            .await?;
+        let channel = Channel::read_from(&resp[..])?;
+        for item in channel.items {
+            let date_str = item.title.unwrap();
+            let date_str = &date_str[date_str.find(' ').unwrap()+1..];
+            let date = NaiveDate::parse_from_str(date_str, "%d.%m.%Y").unwrap();
+            let foodstr = item.description.unwrap();
+            let caps = FOOD_REGEX.captures(&foodstr).unwrap();
+            let caps = caps.get(1).unwrap().as_str();
+            let caps = ALLERGEENI_REGEX.replace_all(caps, ",");
+            let caps = caps.replace("M,G,V", "");
+            let caps = caps.replace("., ", "");
+            let caps = caps.replace(" ,", ",");
+            let caps = caps.replace(",,", ",");
+            let caps = caps.replace("  ", " ");
+            retvec.push((date, caps.trim_end_matches(&[',', ' ', 'M']).to_string()))
         }
-        listavec.push((pvm, foodvec.join(" ")));
-        foodvec.clear();
-        content = content[secondindex + firstindex..].to_string();
     }
-    Ok(listavec)
+    Ok(retvec)
 }

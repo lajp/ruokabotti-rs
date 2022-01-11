@@ -31,4 +31,6 @@ tracing = "*"
 tracing-subscriber = { version = "*", features = ["env-filter"] }
 futures = "*"
 chrono = "*"
-lopdf = "*"
+rss = "2.0"
+anyhow = "1.0"
+lazy_static = "1.4"

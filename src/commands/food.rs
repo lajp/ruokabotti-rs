@@ -45,7 +45,8 @@ pub async fn food(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
                 match db.fetch_food_and_id_by_date(date.to_string()).await? {
                     Some(r) => r,
                     None => {
-                        update_ruokadb(ctx, None).await.ok();
+                        msg.channel_id.send_message(&ctx.http, |m| m.content("Päivitetään ruokalistaa..")).await.unwrap();
+                        update_ruokadb(ctx).await.ok();
                         match db
                             .fetch_food_and_id_by_date(date.to_string())
                             .await
@@ -62,7 +63,8 @@ pub async fn food(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
                 }
             }
             _ => {
-                update_ruokadb(ctx, None).await.ok();
+                msg.channel_id.send_message(&ctx.http, |m| m.content("Päivitetään ruokalistaa..")).await.unwrap();
+                update_ruokadb(ctx).await.ok();
                 match db
                     .fetch_food_and_id_by_date(date.to_string())
                     .await
