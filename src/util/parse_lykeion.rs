@@ -22,11 +22,11 @@ pub async fn parse_lykeion() -> Result<Vec<(NaiveDate, String)>, anyhow::Error> 
             let date_str = &item.title.unwrap()[date_str.find(' ').unwrap()+1..];
             let date = NaiveDate::parse_from_str(date_str, "%d.%m.%Y").unwrap();
             let foodstr = item.description.unwrap();
-            let caps = 
-            let caps = ALLERGEENI_REGEX.replace_all(FOOD_REGEX
-                .captures(&foodstr).unwrap()
-                .get(1).unwrap()
-                .as_str(), ",")
+            let caps = ALLERGEENI_REGEX.replace_all(
+                FOOD_REGEX
+                    .captures(&foodstr).unwrap()
+                    .get(1).unwrap()
+                    .as_str(), ",")
                 .replace("M,G,V", "")
                 .replace("., ", "")
                 .replace(" ,", ",")
